@@ -21,13 +21,17 @@ pip install -r requirements.txt
 ```
 
 **Windows (PowerShell)**
+
+> Requiere **Python 3.11 o 3.12**. Puedes descargarlo en [python.org/downloads](https://www.python.org/downloads/). Python 3.13+ no es compatible con las dependencias actuales.
+
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
+python.exe -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-> En Windows, si PowerShell bloquea la ejecución de scripts, corre primero:
+> Si PowerShell bloquea la ejecución de scripts, corre primero:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
 ### 3. Instalar `libomp` (solo Mac — requerido por LightGBM)
