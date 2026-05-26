@@ -42,24 +42,15 @@ brew install libomp
 
 > En Windows y Linux no es necesario; LightGBM incluye sus propias librerías.
 
-### 4. Correr los siguientes comandos en orden
+### 4. Correr el servidor
 
-Correr cada línea por separado — no pegarlas juntas.
-
-```bash
-python -m batch.seed --data-dir "CompleteData"
-```
-```bash
-python -m batch.train --branch all --top-n 5
-```
-```bash
-python -m batch.forecast --horizon 7
-```
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
 Abrir http://localhost:8000 en el navegador.
+
+> La primera vez que arranca, el servidor detecta automáticamente si faltan datos, modelos o forecasts y los genera solo. Puede tardar unos minutos en el primer inicio.
 
 > Si aparece el error `No module found` o `python not found`, asegúrate de haber activado el entorno.
 > - Mac/Linux: `source .venv/bin/activate`

@@ -1,6 +1,9 @@
 """FastAPI application entry point."""
 from __future__ import annotations
 
+import sqlite3
+import subprocess
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -15,16 +18,43 @@ from .db import init_db
 from .routes import analytics, auth_routes, feedback, forecast, model, pages, product, retrain
 
 scheduler = AsyncIOScheduler(timezone=TZ)
+BASE = Path(__file__).resolve().parent.parent
+
+
+def _db_count(query: str) -> int:
+    db_path = BASE / "panem.db"
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute(query).fetchone()[0]
+
+
+def _run(cmd: list[str]) -> None:
+    subprocess.run([sys.executable, *cmd], cwd=str(BASE), check=True)
+
+
+def _auto_setup() -> None:
+    data_dir = BASE / "CompleteData"
+    if not data_dir.exists():
+        print("[setup] CompleteData folder not found — skipping auto-setup")
+        return
+
+    if _db_count("SELECT COUNT(*) FROM user") == 0:
+        print("[setup] No users found — running seed...")
+        _run(["-m", "batch.seed", "--data-dir", str(data_dir)])
+
+    if _db_count("SELECT COUNT(*) FROM modelrun") == 0:
+        print("[setup] No trained models found — running train (this may take a few minutes)...")
+        _run(["-m", "batch.train", "--branch", "all", "--top-n", "5"])
+
+    if _db_count("SELECT COUNT(*) FROM forecast WHERE target_date >= date('now')") == 0:
+        print("[setup] No upcoming forecasts found — running forecast...")
+        _run(["-m", "batch.forecast", "--horizon", "7"])
 
 
 def _nightly_forecast_job() -> None:
     """Regenerate next-7-day forecasts. Runs daily at 03:00 Monterrey."""
-    import subprocess
-    import sys
-    base = Path(__file__).resolve().parent.parent
     subprocess.Popen(
         [sys.executable, "-m", "batch.forecast", "--horizon", "7"],
-        cwd=str(base),
+        cwd=str(BASE),
     )
 
 
@@ -54,6 +84,7 @@ def _preload_csv_data() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    _auto_setup()
     _preload_csv_data()
     if not scheduler.running:
         scheduler.add_job(_nightly_forecast_job, CronTrigger(hour=3, minute=0), id="forecast")
@@ -74,5 +105,4 @@ app.include_router(feedback.router)
 app.include_router(model.router)
 app.include_router(retrain.router)
 
-base_dir = Path(__file__).resolve().parent.parent
-app.mount("/static", StaticFiles(directory=base_dir / "static"), name="static")
+app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
