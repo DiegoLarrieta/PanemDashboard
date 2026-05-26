@@ -72,22 +72,23 @@ Abrir http://localhost:8000 en el navegador.
 
 > La primera vez puede tardar unos minutos — el servidor genera automáticamente los datos, entrena el modelo y crea los forecasts.
 
-## Default users
+## Usuarios y roles
 
 | Username  | Password | Role     |
 |-----------|----------|----------|
 | operator  | panem    | operator |
 | analyst   | panem    | analyst  |
 
-Change them in `batch/seed.py` before deploying.
+**Operator** — perfil operativo del día a día:
+- Ve el bake plan de hoy (`/`) — cuánto producir de cada producto
+- Ve el detalle por producto (`/product`)
 
-## Pages
+**Analyst** — perfil técnico/administrativo, tiene todo lo del operator más:
+- `/model` — rendimiento del modelo, métricas (MAE, RMSE, MAPE) e historial de versiones
+- `/feedback` — registra overrides y actuals (lo que realmente se vendió)
+- Puede disparar reentrenamiento del modelo y regenerar forecasts desde la UI
 
-- `/` — Today's Bake Plan (operator + analyst)
-- `/product/<sku>?branch=...` — Product deep-dive
-- `/model` — Model card & performance (analyst only)
-- `/feedback` — Override + actuals log (analyst only)
-- `/login` — Login
+> Para cambiar las contraseñas, edita `batch/seed.py` antes de hacer deploy.
 
 ## The feedback loop
 
