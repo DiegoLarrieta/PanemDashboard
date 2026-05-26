@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Model · Panem{% endblock %}
+
+{% block content %}
+<div class="pageheader">
+  <div>
+    <h1>Model card</h1>
+    <div class="meta">Production demand model · <span id="versionLabel" class="muted">—</span></div>
+  </div>
+  <button class="btn btn--primary" id="retrainBtn">Retrain now</button>
+</div>
+
+<div id="driftBanner"></div>
+
+<section class="card glass">
+  <h3>Summary</h3>
+  <div class="grid-3">
+    <div><h4>Algorithm</h4><div id="sumAlgo">—</div></div>
+    <div><h4>Training data</h4><div id="sumData">—</div></div>
+    <div><h4>Validation</h4><div id="sumVal">—</div></div>
+    <div><h4>Baseline</h4><div id="sumBaseline">—</div></div>
+    <div><h4>Last retrain</h4><div id="sumRetrain">—</div></div>
+    <div><h4>Actuals used in last training</h4><div id="sumActuals">—</div></div>
+  </div>
+  <hr class="soft">
+  <h4>Features</h4>
+  <div id="sumFeatures" class="muted"></div>
+</section>
+
+<section class="card glass">
+  <h3>Headline metrics · most recent run per algorithm</h3>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Algorithm</th>
+          <th class="num">MAE</th>
+          <th class="num">RMSE</th>
+          <th class="num">MAPE</th>
+          <th class="num">Acc ±20%</th>
+          <th>Beats baseline?</th>
+          <th>Active?</th>
+        </tr>
+      </thead>
+      <tbody id="metricsBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card glass">
+    <h3>MAE by SKU volume bucket</h3>
+    <div class="chart-wrap"><canvas id="chartBucket"></canvas></div>
+  </div>
+  <div class="card glass">
+    <h3>Residual distribution</h3>
+    <div class="chart-wrap"><canvas id="chartResid"></canvas></div>
+    <div class="muted" id="residStats" style="font-size:12px; margin-top:8px;"></div>
+  </div>
+</section>
+
+<section class="card glass">
+  <h3>Forecast error over time · rolling 14-day MAE</h3>
+  <div class="chart-wrap tall"><canvas id="chartDrift"></canvas></div>
+  <div class="muted" style="font-size:12px; margin-top:8px;">The red dotted line marks 1.25× the training-MAE — sustained drift above it triggers a retraining recommendation.</div>
+</section>
+
+<section class="card glass">
+  <h3>Known limitations</h3>
+  <div class="grid-2" id="limBox"></div>
+</section>
+
+<section class="card glass">
+  <h3>Run history</h3>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Version</th><th>Algo</th><th class="num">MAE</th><th class="num">MAPE</th><th class="num">Acc20</th><th>Trained</th><th>Promoted</th><th class="num">Feedback rows</th></tr></thead>
+      <tbody id="runsBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div id="retrainModal" style="display:none;" class="modal-backdrop">
+  <div class="modal glass glass--strong">
+    <h2>Retraining…</h2>
+    <div class="muted" style="margin-bottom: 14px;"><span class="spinner"></span> Running Prophet + LightGBM walk-forward. This takes a few minutes.</div>
+    <pre id="retrainLog" style="font-size:11px; max-height:200px; overflow:auto; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px;"></pre>
+    <div class="actions">
+      <button class="btn btn--ghost" id="closeRetrain">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/model.js"></script>
+{% endblock %}

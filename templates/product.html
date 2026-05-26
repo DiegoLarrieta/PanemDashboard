@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Product · Panem{% endblock %}
+
+{% block content %}
+<div class="pageheader">
+  <div>
+    <h1 id="prodTitle">Product</h1>
+    <div class="meta"><strong id="prodBranch"></strong> · SKU <span id="prodSku" class="tabular muted"></span> · <span class="muted">next bake </span><strong id="nextBake"></strong></div>
+  </div>
+  <a class="btn btn--ghost" href="/?branch=" id="backBtn">← back to plan</a>
+</div>
+
+<section class="grid-2-1">
+  <div class="reco glass glass--strong" id="recoCard">
+    <div class="label">Predicted units · next 7 days</div>
+    <div class="number" id="recoNumber">—</div>
+    <div class="ci" id="recoCI">—</div>
+    <div class="row">
+      <span><strong id="recoBaseline">—</strong> baseline (lag-7)</span>
+      <span><strong id="recoModel">—</strong> model</span>
+      <span><strong id="recoRetrain">—</strong> last retrain</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn--ok" id="acceptBtn">Accept prediction</button>
+      <button class="btn btn--primary" id="overrideBtn">Override</button>
+    </div>
+  </div>
+  <div class="card glass">
+    <h3>Peer comparison · same SKU across branches</h3>
+    <div class="chart-wrap"><canvas id="chartPeers"></canvas></div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card glass">
+    <h3>90-day sales history</h3>
+    <div class="chart-wrap tall"><canvas id="chartHistory"></canvas></div>
+  </div>
+  <div class="card glass">
+    <h3>History &amp; next-week forecast</h3>
+    <div class="chart-wrap tall"><canvas id="chartFvA"></canvas></div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card glass">
+    <h3>Weekday seasonality</h3>
+    <div class="chart-wrap"><canvas id="chartDow"></canvas></div>
+  </div>
+  <div class="card glass">
+    <h3>Cold-day &amp; quincena response</h3>
+    <div class="grid-2" style="gap: 16px;">
+      <div>
+        <h4>Temperature</h4>
+        <div class="chart-wrap"><canvas id="chartTemp"></canvas></div>
+      </div>
+      <div>
+        <h4>Payday (quincena)</h4>
+        <div class="chart-wrap"><canvas id="chartQ"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card glass">
+    <h3>Similar SKUs at this branch · 90-day correlation</h3>
+    <div class="table-wrap">
+      <table class="data" id="similarTable">
+        <thead><tr><th>SKU</th><th>Item</th><th class="num">Pearson r</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card glass">
+    <h3>Revenue vs units · historical days</h3>
+    <div class="chart-wrap"><canvas id="chartRev"></canvas></div>
+    <div class="muted" style="font-size:12px; margin-top:8px;">Each dot = one historical day. The accent dot is the predicted bake projected onto the curve.</div>
+  </div>
+</section>
+
+<div id="overlay" style="display:none;" class="modal-backdrop">
+  <div class="modal glass glass--strong">
+    <h2>Override prediction</h2>
+    <div class="row"><label>SKU</label><div class="muted" id="ovSku"></div></div>
+    <div class="row">
+      <label for="ovUnits">Override units</label>
+      <input id="ovUnits" type="number" min="0" step="1">
+    </div>
+    <div class="row">
+      <label for="ovReason">Reason</label>
+      <select id="ovReason">
+        <option value="weather">Weather</option>
+        <option value="local_event">Local event</option>
+        <option value="promo">Promo / featured</option>
+        <option value="gut_feel">Gut feel</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="ovNote">Note (optional)</label>
+      <textarea id="ovNote" rows="2"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn--ghost" id="ovCancel">Cancel</button>
+      <button class="btn btn--primary" id="ovSave">Save override</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/product.js"></script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Analytics · Panem{% endblock %}
+
+{% block filterbar %}
+<div class="filterbar">
+  <div class="filter">
+    <label for="globalBranch">Sucursal</label>
+    <select id="globalBranch">
+      <option value="all">All branches</option>
+      {% for b in branches %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="spacer"></div>
+  <span class="muted" style="font-size:12px;">Applies to all charts</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="pageheader">
+  <div>
+    <h1>Analytics</h1>
+    <div class="meta">Historical sales insights &amp; demand patterns across all branches · <strong id="activeBranchLabel">All branches</strong></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     Row 1: Sales Over Time (full width)
+     ================================================================ -->
+<section>
+  <div class="card glass">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <h3 style="margin:0;">Sales Over Time</h3>
+      <div class="filter">
+        <label for="sotGranularity">Granularity</label>
+        <select id="sotGranularity">
+          <option value="month">Month</option>
+          <option value="week">Week</option>
+        </select>
+      </div>
+    </div>
+    <div class="chart-wrap tall"><canvas id="chartSalesOverTime"></canvas></div>
+  </div>
+</section>
+
+<!-- ================================================================
+     Row 2: Top Products + Monthly Seasonality
+     ================================================================ -->
+<section class="grid-2">
+
+  <!-- Top Products -->
+  <div class="card glass">
+    <h3>Top Products</h3>
+    <div class="chart-wrap tall"><canvas id="chartTopProducts"></canvas></div>
+  </div>
+
+  <!-- Monthly Seasonality -->
+  <div class="card glass">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <h3 style="margin:0;">Monthly Seasonality</h3>
+      <div class="filter">
+        <label for="msSku">Product</label>
+        <input id="msSku" type="text" list="skuList" placeholder="All products" style="width:160px;">
+        <datalist id="skuList"></datalist>
+      </div>
+    </div>
+    <div class="chart-wrap tall"><canvas id="chartMonthlySeasonality"></canvas></div>
+  </div>
+
+</section>
+
+<!-- ================================================================
+     Row 3: Weekday Heatmap + Weather Impact + Holiday Effect
+     ================================================================ -->
+<section class="grid-3">
+
+  <!-- Weekday Heatmap -->
+  <div class="card glass">
+    <h3>Weekday Demand</h3>
+    <div class="chart-wrap tall"><canvas id="chartWeekdayHeatmap"></canvas></div>
+  </div>
+
+  <!-- Weather Impact -->
+  <div class="card glass">
+    <h3>Weather Impact</h3>
+    <div class="chart-wrap tall"><canvas id="chartWeatherImpact"></canvas></div>
+    <p class="muted" style="font-size:11px; margin-top:8px;">Avg daily units sold on cold (&lt;18 °C), mild (18–28 °C) and warm (&gt;28 °C) days.</p>
+  </div>
+
+  <!-- Holiday Effect -->
+  <div class="card glass">
+    <h3>Holiday Effect</h3>
+    <div class="chart-wrap tall"><canvas id="chartHolidayImpact"></canvas></div>
+    <p class="muted" style="font-size:11px; margin-top:8px;">Avg daily units on regular days vs. quincena pay-days vs. public holidays.</p>
+  </div>
+
+</section>
+
+<!-- ================================================================
+     Row 4: Demand Heatmap
+     ================================================================ -->
+<section>
+  <div class="card glass">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+      <h3 style="margin:0;">Demand Heatmap</h3>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+
+        <!-- View toggle -->
+        <div class="filter">
+          <label>View</label>
+          <div style="display:flex; gap:4px;">
+            <button class="btn heatmap-view-btn active" data-view="monthly">Monthly</button>
+            <button class="btn heatmap-view-btn" data-view="weekly">Weekly</button>
+            <button class="btn heatmap-view-btn" data-view="hourly">By Hour</button>
+          </div>
+        </div>
+
+        <!-- Sucursal filter -->
+        <div class="filter">
+          <label for="hmBranch">Sucursal</label>
+          <select id="hmBranch">
+            <option value="all">All branches</option>
+            {% for b in branches %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <!-- Item filter -->
+        <div class="filter">
+          <label for="hmItem">Product</label>
+          <select id="hmItem" style="min-width:180px;">
+            <option value="all">All products</option>
+          </select>
+        </div>
+
+        <!-- Month filter (hourly only) -->
+        <div class="filter" id="hmMonthWrap" style="display:none;">
+          <label for="hmMonth">Month</label>
+          <select id="hmMonth">
+            <option value="all">All months</option>
+            <option value="1">Jan</option><option value="2">Feb</option>
+            <option value="3">Mar</option><option value="4">Apr</option>
+            <option value="5">May</option><option value="6">Jun</option>
+            <option value="7">Jul</option><option value="8">Aug</option>
+            <option value="9">Sep</option><option value="10">Oct</option>
+            <option value="11">Nov</option><option value="12">Dec</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Heatmap caption -->
+    <p class="muted" id="hmCaption" style="font-size:11px; margin:0 0 10px 0;">
+      Rows = months · Columns = years · Cell = total units sold
+    </p>
+
+    <!-- Plotly container -->
+    <div id="hmPlot" style="width:100%; min-height:380px;"></div>
+
+    <!-- Loading / empty states -->
+    <div id="hmLoading" style="display:none; text-align:center; padding:60px 0; color:var(--muted);">Loading heatmap…</div>
+    <div id="hmEmpty"   style="display:none; text-align:center; padding:60px 0; color:var(--muted);">No data for the selected filters.</div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="/static/js/analytics.js"></script>
+{% endblock %}

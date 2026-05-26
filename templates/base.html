@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}Panem · Daily Bake Planner{% endblock %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/css/panem.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  window.SERVER_NOW = "{{ server_now }}";
+  window.USER = { username: "{{ user.username }}", role: "{{ user.role }}" };
+</script>
+</head>
+<body>
+{% if not hide_chrome %}
+<header class="topbar">
+  <div class="logo">PANEM</div>
+  <nav>
+    <a href="/" class="{{ 'active' if nav == 'plan' }}">Bake Plan</a>
+    {% if current_sku %}<a href="/product/{{ current_sku }}?branch={{ current_branch }}" class="active">Product</a>{% endif %}
+    <a href="/analytics" class="{{ 'active' if nav == 'analytics' }}">Analytics</a>
+    {% if user.role == 'analyst' %}
+    <a href="/model" class="{{ 'active' if nav == 'model' }}">Model</a>
+    <a href="/feedback" class="{{ 'active' if nav == 'feedback' }}">Feedback</a>
+    {% endif %}
+  </nav>
+  <div class="right">
+    <div class="clock" id="topClock"><span class="date" id="topDate"></span><span id="topTime">--:--</span></div>
+    <div class="userchip">{{ user.username }}<span class="role">{{ user.role }}</span></div>
+    <a class="logout" href="/logout">Logout</a>
+  </div>
+</header>
+{% endif %}
+{% block filterbar %}{% endblock %}
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/charts.js"></script>
+<script>
+  // Live clock anchored to server time (Monterrey).
+  (function initClock() {
+    if (!window.SERVER_NOW) return;
+    const serverStart = new Date(window.SERVER_NOW);
+    const clientStart = Date.now();
+    const fmtDate = new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      timeZone: 'America/Monterrey'
+    });
+    const fmtTime = new Intl.DateTimeFormat('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: false,
+      timeZone: 'America/Monterrey'
+    });
+    function tick() {
+      const now = new Date(serverStart.getTime() + (Date.now() - clientStart));
+      const d = document.getElementById('topDate');
+      const t = document.getElementById('topTime');
+      if (d) d.textContent = fmtDate.format(now);
+      if (t) t.textContent = fmtTime.format(now);
+    }
+    tick();
+    setInterval(tick, 30000);
+    // Resync every 5 minutes so client drift doesn't accumulate.
+    setInterval(async () => {
+      try {
+        const r = await fetch('/api/now');
+        const j = await r.json();
+        serverStart.setTime(new Date(j.server_now).getTime());
+        // eslint-disable-next-line no-self-assign
+        window._lastSync = Date.now();
+      } catch (e) {}
+    }, 300000);
+  })();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

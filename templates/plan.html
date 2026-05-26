@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Bake Plan · Panem{% endblock %}
+
+{% block filterbar %}
+<div class="filterbar">
+  <div class="filter">
+    <label for="branch">Branch</label>
+    <select id="branch">
+      {% for b in branches %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="filter">
+    <label for="bakeDate">Bake date</label>
+    <input id="bakeDate" type="date" value="{{ default_bake_date }}">
+  </div>
+  <div class="filter">
+    <label for="confSlider">Min confidence (lower bound %)</label>
+    <input id="confSlider" type="range" min="0" max="100" value="0">
+  </div>
+  <div class="spacer"></div>
+  <span id="modePill" class="modepill plan"><span class="dot"></span><span class="text">Plan</span></span>
+  <button id="actualsBtn" class="btn btn--secondary" title="Record actual units sold & wasted">📋 Log actuals</button>
+  <button id="genFcBtn" class="btn btn--secondary" title="Generate forecasts for the next 14 days">🔮 Generate forecast</button>
+  <button id="lockBtn" class="btn btn--primary">Lock plan &amp; send to oven</button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="pageheader">
+  <div>
+    <h1 id="pageTitle">Bake plan</h1>
+    <div class="meta"><strong id="branchLabel"></strong> · <span id="dateLabel"></span> · <span id="modelVersion" class="muted"></span></div>
+  </div>
+  <div id="bannerSlot"></div>
+</div>
+
+<section class="grid-4" id="kpis">
+  <div class="kpi glass glass--strong"><div class="label">Units to bake</div><div class="value" id="kpiUnits">—</div><div class="delta">across top-5 SKUs</div></div>
+  <div class="kpi glass glass--strong"><div class="label">Projected revenue</div><div class="value" id="kpiRevenue">—</div><div class="delta">at avg historical price</div></div>
+  <div class="kpi glass glass--strong"><div class="label">Expected waste</div><div class="value" id="kpiWaste">—</div><div class="delta">units above lower CI</div></div>
+  <div class="kpi glass glass--strong"><div class="label">Stock-out risk SKUs</div><div class="value" id="kpiRisk">—</div><div class="delta">last week &gt; lower CI</div></div>
+  <div class="kpi glass glass--strong hidden" id="wasteKpi"><div class="label">Recorded waste rate</div><div class="value" id="kpiWasteRate">—</div><div class="delta">from logged actuals</div></div>
+</section>
+
+<section class="grid-2-1">
+  <div class="card glass">
+    <h3>Recommended bake</h3>
+    <div class="table-wrap">
+      <table class="data" id="planTable">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Item</th>
+            <th class="num">Last 7d sold</th>
+            <th class="num">Next 7d pred.</th>
+            <th class="num">CI 80%</th>
+            <th class="num" id="actionHead">Sold · Wasted</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="muted" id="emptyHint" style="margin-top: 14px; display:none;">No forecasts for this branch/date. Run <code>python -m batch.forecast</code>.</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:24px;">
+    <div class="card glass">
+      <h3>Units by branch</h3>
+      <div class="chart-wrap"><canvas id="chartByBranch"></canvas></div>
+    </div>
+    <div class="card glass">
+      <h3>Forecast vs actual · 7 days</h3>
+      <div class="chart-wrap"><canvas id="chartVsActual"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- Daily actuals modal -->
+<div id="actualsOverlay" style="display:none;" class="modal-backdrop">
+  <div class="modal glass glass--strong" style="width:560px; max-width:96vw;">
+    <h2>Log daily actuals</h2>
+    <div class="muted" style="font-size:12px; margin:-8px 0 14px 0;">
+      Select a day, then enter what was actually sold and wasted for each item.
+    </div>
+
+    <!-- Day strip: 7 pills, one per day of the week -->
+    <div id="acDayStrip" style="display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;"></div>
+
+    <!-- Selected date label -->
+    <div style="font-size:13px; font-weight:600; color:var(--accent); margin-bottom:10px;" id="acSelectedLabel"></div>
+
+    <!-- SKU table for the selected date -->
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; font-size:11px; color:var(--muted); font-weight:500; padding:4px 0;">Item</th>
+          <th style="text-align:right; font-size:11px; color:var(--muted); font-weight:500; padding:4px 8px;">Predicted</th>
+          <th style="text-align:right; font-size:11px; color:var(--muted); font-weight:500; padding:4px 8px;">Sold</th>
+          <th style="text-align:right; font-size:11px; color:var(--muted); font-weight:500; padding:4px 0;">Wasted</th>
+        </tr>
+      </thead>
+      <tbody id="acSkuRows"></tbody>
+    </table>
+
+    <div class="actions" style="margin-top:18px;">
+      <button class="btn btn--ghost" id="acCancel">Close</button>
+      <button class="btn btn--primary" id="acSave">Save this day</button>
+    </div>
+  </div>
+</div>
+
+<!-- Override modal -->
+<div id="overlay" style="display:none;" class="modal-backdrop">
+  <div class="modal glass glass--strong">
+    <h2>Override prediction</h2>
+    <div class="row"><label>SKU</label><div class="muted" id="ovSku"></div></div>
+    <div class="row">
+      <label for="ovUnits">Override units</label>
+      <input id="ovUnits" type="number" min="0" step="1">
+    </div>
+    <div class="row">
+      <label for="ovReason">Reason</label>
+      <select id="ovReason">
+        <option value="weather">Weather</option>
+        <option value="local_event">Local event</option>
+        <option value="promo">Promo / featured</option>
+        <option value="gut_feel">Gut feel</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="row">
+      <label for="ovNote">Note (optional)</label>
+      <textarea id="ovNote" rows="2"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn--danger" id="ovDelete">Delete override</button>
+      <div style="flex:1"></div>
+      <button class="btn btn--ghost" id="ovCancel">Cancel</button>
+      <button class="btn btn--primary" id="ovSave">Save override</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/plan.js"></script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Feedback log · Panem{% endblock %}
+
+{% block filterbar %}
+<div class="filterbar">
+  <div class="filter">
+    <label for="branch">Branch</label>
+    <select id="branch">
+      <option value="">All</option>
+      {% for b in branches %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="filter">
+    <label for="days">Days back</label>
+    <input id="days" type="number" min="1" max="90" value="14">
+  </div>
+  <div class="spacer"></div>
+  <div class="muted" style="font-size: 12px;">Audit the feedback that's training the next model.</div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="pageheader">
+  <div>
+    <h1>Feedback log</h1>
+    <div class="meta">Operator overrides and post-bake actuals.</div>
+  </div>
+</div>
+
+<section class="card glass">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>When</th><th>Kind</th><th>User</th>
+          <th>Branch</th><th>SKU</th><th>Item</th><th>Date</th>
+          <th class="num">Predicted</th><th class="num">Override / sold</th><th class="num">Delta / error</th>
+          <th>Reason / waste</th>
+        </tr>
+      </thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function () {
+  const branch = document.getElementById('branch');
+  const days = document.getElementById('days');
+  const body = document.getElementById('logBody');
+
+  async function load() {
+    const qs = new URLSearchParams();
+    if (branch.value) qs.set('branch', branch.value);
+    qs.set('days', days.value || '14');
+    const data = await api.get('/api/feedback/log?' + qs);
+    if (!data.rows.length) {
+      body.innerHTML = '<tr><td colspan="11" class="muted">No feedback yet in this window.</td></tr>';
+      return;
+    }
+    body.innerHTML = data.rows.map(r => {
+      const isOv = r.kind === 'override';
+      return `<tr>
+        <td class="muted">${new Date(r.at).toLocaleString()}</td>
+        <td>${isOv ? '<span class="chip" style="background: var(--accent-soft); color: var(--accent);">override</span>'
+                  : '<span class="chip ok">actual</span>'}</td>
+        <td>${r.user}</td>
+        <td>${r.branch}</td>
+        <td>${r.sku}</td>
+        <td>${r.item_name || ''}</td>
+        <td class="muted">${fmt.date(r.bake_date)}</td>
+        <td class="num tabular">${fmt.int(r.predicted_units)}</td>
+        <td class="num tabular">${isOv ? fmt.int(r.override_units) : fmt.int(r.qty_sold)}</td>
+        <td class="num tabular">${isOv ? fmt.signed(r.delta) : (r.error != null ? fmt.signed(r.error) : '—')}</td>
+        <td>${isOv ? `${r.reason}${r.note ? ' · ' + r.note : ''}` :
+                     `${fmt.int(r.qty_wasted)} wasted`}</td>
+      </tr>`;
+    }).join('');
+  }
+  branch.addEventListener('change', load);
+  days.addEventListener('change', load);
+  load();
+})();
+</script>
+{% endblock %}
