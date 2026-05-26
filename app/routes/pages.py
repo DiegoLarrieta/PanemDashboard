@@ -1,6 +1,8 @@
 """HTML page routes — Jinja templates."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -30,14 +32,14 @@ def _ctx(request: Request, user: User, **extra) -> dict:
 
 
 @router.get("/", response_class=HTMLResponse)
-def page_plan(request: Request, user: User | None = Depends(current_user_optional)):
+def page_plan(request: Request, user: Optional[User] = Depends(current_user_optional)):
     if not user:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("plan.html", _ctx(request, user, nav="plan"))
 
 
 @router.get("/product/{sku}", response_class=HTMLResponse)
-def page_product(sku: str, branch: str, request: Request, user: User | None = Depends(current_user_optional)):
+def page_product(sku: str, branch: str, request: Request, user: Optional[User] = Depends(current_user_optional)):
     if not user:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("product.html", _ctx(
@@ -46,7 +48,7 @@ def page_product(sku: str, branch: str, request: Request, user: User | None = De
 
 
 @router.get("/model", response_class=HTMLResponse)
-def page_model(request: Request, user: User | None = Depends(current_user_optional)):
+def page_model(request: Request, user: Optional[User] = Depends(current_user_optional)):
     if not user:
         return RedirectResponse("/login", status_code=302)
     if user.role != "analyst":
@@ -55,7 +57,7 @@ def page_model(request: Request, user: User | None = Depends(current_user_option
 
 
 @router.get("/feedback", response_class=HTMLResponse)
-def page_feedback(request: Request, user: User | None = Depends(current_user_optional)):
+def page_feedback(request: Request, user: Optional[User] = Depends(current_user_optional)):
     if not user:
         return RedirectResponse("/login", status_code=302)
     if user.role != "analyst":
@@ -64,7 +66,7 @@ def page_feedback(request: Request, user: User | None = Depends(current_user_opt
 
 
 @router.get("/analytics", response_class=HTMLResponse)
-def page_analytics(request: Request, user: User | None = Depends(current_user_optional)):
+def page_analytics(request: Request, user: Optional[User] = Depends(current_user_optional)):
     if not user:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("analytics.html", _ctx(request, user, nav="analytics"))

@@ -4,18 +4,33 @@ Operator and analyst dashboard for Panem Bakery & Bistro's demand-forecasting mo
 
 ## Quick start
 
+### 1. Clonar el repositorio
+
 ```bash
-cd "Panem/website"
+git clone https://github.com/DiegoLarrieta/PanemDashboard.git
+cd PanemDashboard
+```
+
+### 2. Crear el entorno virtual e instalar dependencias
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Then run these one at a time. Each line stands alone — don't paste trailing
-comments onto the same line (zsh will pass them as arguments).
+### 3. Instalar `libomp` (requerido por LightGBM en Mac)
 
 ```bash
-python -m batch.seed --data-dir "../../Complete Data"
+brew install libomp
+```
+
+### 4. Correr los siguientes comandos en orden
+
+Correr cada línea por separado — no pegarlas juntas.
+
+```bash
+python -m batch.seed --data-dir "CompleteData"
 ```
 ```bash
 python -m batch.train --branch all --top-n 5
@@ -27,10 +42,9 @@ python -m batch.forecast --horizon 7
 uvicorn app.main:app --reload --port 8000
 ```
 
-Then open http://localhost:8000 in your browser.
+Abrir http://localhost:8000 en el navegador.
 
-If `python` is not found, you forgot to `source .venv/bin/activate` —
-or use `python3` instead.
+> Si aparece el error `No module found` o `python not found`, asegúrate de haber activado el entorno: `source .venv/bin/activate`
 
 ## Default users
 
@@ -57,4 +71,3 @@ retraining promotes a new model only if it beats the active one on held-out data
 APScheduler runs forecast generation nightly at 03:00 Monterrey time and
 drift check at 22:00 — the site is self-maintaining.
 
-See `/Users/mak/.claude/plans/keep-going-sorry-zesty-otter.md` for full design.

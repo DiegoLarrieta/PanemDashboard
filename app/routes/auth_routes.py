@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -21,8 +22,8 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/login", response_class=HTMLResponse)
 def login_page(
     request: Request,
-    error: str | None = None,
-    user: User | None = Depends(current_user_optional),
+    error: Optional[str] = None,
+    user: Optional[User] = Depends(current_user_optional),
 ):
     if user:
         return RedirectResponse("/", status_code=302)
