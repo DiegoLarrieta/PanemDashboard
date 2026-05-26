@@ -2,7 +2,27 @@
 
 Operator and analyst dashboard for Panem Bakery & Bistro's demand-forecasting model.
 
-## Quick start
+## Uso diario
+
+Una vez instalado, estos son los únicos dos comandos que necesitas cada vez:
+
+**Mac / Linux**
+```bash
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+**Windows (PowerShell)**
+```powershell
+.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000
+```
+
+Abrir http://localhost:8000 en el navegador.
+
+---
+
+## Instalación (solo la primera vez)
 
 ### 1. Clonar el repositorio
 
@@ -50,11 +70,7 @@ uvicorn app.main:app --reload --port 8000
 
 Abrir http://localhost:8000 en el navegador.
 
-> La primera vez que arranca, el servidor detecta automáticamente si faltan datos, modelos o forecasts y los genera solo. Puede tardar unos minutos en el primer inicio.
-
-> Si aparece el error `No module found` o `python not found`, asegúrate de haber activado el entorno.
-> - Mac/Linux: `source .venv/bin/activate`
-> - Windows: `.venv\Scripts\Activate.ps1`
+> La primera vez puede tardar unos minutos — el servidor genera automáticamente los datos, entrena el modelo y crea los forecasts.
 
 ## Default users
 
