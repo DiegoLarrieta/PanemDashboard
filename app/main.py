@@ -45,7 +45,7 @@ def _auto_setup() -> None:
         print("[setup] No trained models found — running train (this may take a few minutes)...")
         _run(["-m", "batch.train", "--branch", "all", "--top-n", "5"])
 
-    if _db_count("SELECT COUNT(*) FROM forecast WHERE target_date >= date('now')") == 0:
+    if _db_count("SELECT COUNT(*) FROM forecast WHERE bake_date >= date('now')") == 0:
         print("[setup] No upcoming forecasts found — running forecast...")
         _run(["-m", "batch.forecast", "--horizon", "7"])
 
