@@ -24,10 +24,9 @@ router = APIRouter()
 # CSV data loaders (cached at module level — loaded once on first request)
 # ---------------------------------------------------------------------------
 
-# website/app/routes/analytics.py  →  up 5 dirs  →  "Python challenge/"
-_CHALLENGE_DIR  = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-_RAW_CSV_DIR    = os.path.join(_CHALLENGE_DIR, "Complete Data", '"Raw" csv')
-_DETAIL_CSV_DIR = os.path.join(_CHALLENGE_DIR, "Complete Data", "all csv's")
+_PROJECT_DIR    = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_RAW_CSV_DIR    = os.path.join(_PROJECT_DIR, "CompleteData")
+_DETAIL_CSV_DIR = os.path.join(_PROJECT_DIR, "CompleteData")
 
 _branch_df: Optional[pd.DataFrame] = None
 _hourly_df: Optional[pd.DataFrame] = None
