@@ -252,9 +252,10 @@ def load_branch_csvs(branches_dir: Path) -> pd.DataFrame:
         df["date"] = df["operating_date"].dt.date
         df["branch"] = df["sucursal"].map(BRANCH_NAME_MAP).fillna(df["sucursal"])
         df = df.rename(columns={"item": "sku", "quantity": "qty_sold"})
-        df["item_name"] = df["sku"]
-        df["unit_price"] = 0.0
-        df["revenue"] = 0.0
+        df.columns = df.columns.str.strip()
+        df["item_name"] = df["sku"].str.strip() if df["sku"].dtype == object else df["sku"]
+        df["unit_price"] = pd.to_numeric(df.get("unit_price", 0.0), errors="coerce").fillna(0.0)
+        df["revenue"] = pd.to_numeric(df.get("revenue", 0.0), errors="coerce").fillna(0.0)
         frames.append(df[["branch", "sku", "item_name", "date", "qty_sold", "unit_price", "revenue"]])
         print(f"  + {f.name}: {len(df):,} rows")
     return pd.concat(frames, ignore_index=True)
