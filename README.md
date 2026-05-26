@@ -13,17 +13,30 @@ cd PanemDashboard
 
 ### 2. Crear el entorno virtual e instalar dependencias
 
+**Mac / Linux**
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Instalar `libomp` (requerido por LightGBM en Mac)
+**Windows (PowerShell)**
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+> En Windows, si PowerShell bloquea la ejecución de scripts, corre primero:
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+### 3. Instalar `libomp` (solo Mac — requerido por LightGBM)
 
 ```bash
 brew install libomp
 ```
+
+> En Windows y Linux no es necesario; LightGBM incluye sus propias librerías.
 
 ### 4. Correr los siguientes comandos en orden
 
@@ -44,7 +57,9 @@ uvicorn app.main:app --reload --port 8000
 
 Abrir http://localhost:8000 en el navegador.
 
-> Si aparece el error `No module found` o `python not found`, asegúrate de haber activado el entorno: `source .venv/bin/activate`
+> Si aparece el error `No module found` o `python not found`, asegúrate de haber activado el entorno.
+> - Mac/Linux: `source .venv/bin/activate`
+> - Windows: `.venv\Scripts\Activate.ps1`
 
 ## Default users
 
