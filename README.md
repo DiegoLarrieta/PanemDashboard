@@ -7,8 +7,8 @@ Operator and analyst dashboard for Panem Bakery & Bistro's demand-forecasting mo
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/DiegoLarrieta/PanemDashboard.git panem-website
-cd panem-website
+git clone https://github.com/DiegoLarrieta/PanemDashboard.git
+cd PanemDashboard
 ```
 
 ### 2. Crear el entorno virtual e instalar dependencias
