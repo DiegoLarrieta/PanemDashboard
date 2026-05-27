@@ -54,17 +54,45 @@ def naive_lag7(df: pd.DataFrame, test_idx: pd.Index) -> np.ndarray:
     return df.loc[test_idx, "lag_7"].fillna(0).values
 
 
+# External regressors added to Prophet — same set used in forecast.py
+PROPHET_REGRESSORS = ["is_quincena", "is_holiday", "tavg"]
+
+
 # ---------- Prophet ----------
-def fit_prophet(train: pd.DataFrame, horizon: int):
+def fit_prophet(train: pd.DataFrame, horizon: int, future_regressors: pd.DataFrame | None = None):
     from prophet import Prophet
     m = Prophet(
         yearly_seasonality=True, weekly_seasonality=True, daily_seasonality=False,
         interval_width=0.80,
     )
     m.add_country_holidays(country_name="MX")
-    df = train[["ds", "y"]].copy()
-    m.fit(df)
+
+    # Only add regressors that exist in this training frame
+    regs = [r for r in PROPHET_REGRESSORS if r in train.columns and train[r].notna().any()]
+    for reg in regs:
+        m.add_regressor(reg, mode="additive")
+
+    fit_cols = ["ds", "y"] + regs
+    m.fit(train[fit_cols].dropna(subset=["y"]))
+
     future = m.make_future_dataframe(periods=horizon, freq="D")
+
+    if regs:
+        # Build regressor lookup from training history + test period (if provided)
+        hist = train.set_index("ds")[regs]
+        if future_regressors is not None and not future_regressors.empty:
+            avail = [r for r in regs if r in future_regressors.columns]
+            if avail:
+                hist = pd.concat([hist, future_regressors.set_index("ds")[avail]])
+        for reg in regs:
+            future[reg] = future["ds"].map(hist[reg])
+            if reg == "is_quincena":
+                # Deterministic fallback: day 1 and 15 are always quincena
+                future[reg] = future[reg].fillna(
+                    future["ds"].dt.day.isin([1, 15]).astype(float)
+                )
+            future[reg] = future[reg].ffill().bfill().fillna(0)
+
     fc = m.predict(future)
     return m, fc
 
@@ -81,7 +109,10 @@ def prophet_walk_forward(df: pd.DataFrame, n_windows: int = 6, window: int = 7) 
         train = df.iloc[:cut].copy()
         test  = df.iloc[cut:cut + window].copy()
         try:
-            _, fc = fit_prophet(train, horizon=window)
+            # Pass test-period regressor values so Prophet sees the real
+            # is_quincena / is_holiday / tavg for the days it's forecasting
+            reg_cols = ["ds"] + [r for r in PROPHET_REGRESSORS if r in test.columns]
+            _, fc = fit_prophet(train, horizon=window, future_regressors=test[reg_cols])
         except Exception:
             continue
         yhat = fc.tail(window)["yhat"].values
