@@ -242,49 +242,155 @@ BRANCH_NAME_MAP = {
 
 def load_branch_csvs(branches_dir: Path) -> pd.DataFrame:
     """Load the 7 pre-aggregated branch3_*.csv files produced by the Evidence notebooks."""
+
     files = sorted(branches_dir.glob("branch3_*.csv"))
+
     if not files:
         raise SystemExit(f"No branch3_*.csv files found in {branches_dir}")
+
     frames = []
+
     for f in files:
+
         df = pd.read_csv(f, low_memory=False)
-        df["operating_date"] = pd.to_datetime(df["operating_date"])
+
+        # CLEAN COLUMN NAMES FIRST
+        df.columns = (
+            df.columns
+            .str.strip()
+            .str.lower()
+            .str.replace(" ", "_")
+        )
+
+        # Parse dates
+        df["operating_date"] = pd.to_datetime(
+            df["operating_date"],
+            errors="coerce"
+        )
+
         df["date"] = df["operating_date"].dt.date
-        df["branch"] = df["sucursal"].map(BRANCH_NAME_MAP).fillna(df["sucursal"])
-        df = df.rename(columns={"item": "sku", "quantity": "qty_sold"})
-        df.columns = df.columns.str.strip()
-        df["item_name"] = df["sku"].str.strip() if df["sku"].dtype == object else df["sku"]
-        df["unit_price"] = pd.to_numeric(df.get("unit_price", 0.0), errors="coerce").fillna(0.0)
-        df["revenue"] = pd.to_numeric(df.get("revenue", 0.0), errors="coerce").fillna(0.0)
-        frames.append(df[["branch", "sku", "item_name", "date", "qty_sold", "unit_price", "revenue"]])
+
+        # Normalize branch names
+        df["branch"] = (
+            df["sucursal"]
+            .astype(str)
+            .str.strip()
+            .map(BRANCH_NAME_MAP)
+            .fillna(df["sucursal"])
+        )
+
+        # Rename columns
+        df = df.rename(columns={
+            "item": "sku",
+            "quantity": "qty_sold"
+        })
+
+        # Clean item names
+        df["item_name"] = (
+            df["sku"]
+            .astype(str)
+            .str.strip()
+        )
+
+        # Numeric cleanup
+        df["unit_price"] = pd.to_numeric(
+            df.get("unit_price", 0.0),
+            errors="coerce"
+        ).fillna(0.0)
+
+        df["revenue"] = pd.to_numeric(
+            df.get("revenue", 0.0),
+            errors="coerce"
+        ).fillna(0.0)
+
+        df["qty_sold"] = pd.to_numeric(
+            df.get("qty_sold", 0.0),
+            errors="coerce"
+        ).fillna(0.0)
+
+        frames.append(
+            df[
+                [
+                    "branch",
+                    "sku",
+                    "item_name",
+                    "date",
+                    "qty_sold",
+                    "unit_price",
+                    "revenue"
+                ]
+            ]
+        )
+
         print(f"  + {f.name}: {len(df):,} rows")
+
     return pd.concat(frames, ignore_index=True)
 
 
 def seed_weather_from_branches(branches_dir: Path) -> int:
     """Seed weather table from the actual tavg/cold_or_warm data in the branch CSVs."""
+
     files = sorted(branches_dir.glob("branch3_*.csv"))
+
     frames = []
+
     for f in files:
-        df = pd.read_csv(f, usecols=["operating_date", "tavg", "cold_or_warm"], low_memory=False)
-        df["date"] = pd.to_datetime(df["operating_date"]).dt.date
-        frames.append(df[["date", "tavg", "cold_or_warm"]])
+
+        df = pd.read_csv(f, low_memory=False)
+
+        # CLEAN COLUMN NAMES
+        df.columns = (
+            df.columns
+            .str.strip()
+            .str.lower()
+            .str.replace(" ", "_")
+        )
+
+        # Keep only needed columns
+        df = df[["operating_date", "tavg", "cold_or_warm"]]
+
+        df["date"] = pd.to_datetime(
+            df["operating_date"],
+            errors="coerce"
+        ).dt.date
+
+        frames.append(
+            df[["date", "tavg", "cold_or_warm"]]
+        )
+
     combined = pd.concat(frames).dropna(subset=["tavg"])
-    combined = combined.groupby("date").first().reset_index()
+
+    combined = (
+        combined
+        .groupby("date")
+        .first()
+        .reset_index()
+    )
+
     combined["cold_or_warm_num"] = combined["cold_or_warm"].map(
-        {"cold": -1, "warm": 1}
+        {
+            "cold": -1,
+            "warm": 1
+        }
     ).fillna(0).astype(int)
 
-    from app.models import Weather
     rows = [
-        Weather(date=r.date, tavg=float(r.tavg), cold_or_warm_num=int(r.cold_or_warm_num))
+        Weather(
+            date=r.date,
+            tavg=float(r.tavg),
+            cold_or_warm_num=int(r.cold_or_warm_num)
+        )
         for r in combined.itertuples()
     ]
+
     with Session(engine) as s:
+
         s.exec(delete(Weather))
         s.commit()
+
         s.add_all(rows)
         s.commit()
+
     return len(rows)
 
 
