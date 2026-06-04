@@ -126,20 +126,41 @@ def style_plot(fig: go.Figure, height: int = 360) -> go.Figure:
         font={"color": "#f7f4ee", "size": 12},
         margin={"l": 30, "r": 20, "t": 25, "b": 45},
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
-        hovermode="x unified",
+        # Avoid Plotly's unified hover because it shows all bars/traces
+        # that share the same x-axis value. Operators need the exact bar
+        # under the cursor, especially in Top Products and Weekday Demand.
+        hovermode="closest",
+        hoverlabel={
+            "bgcolor": "rgba(20,13,6,0.96)",
+            "bordercolor": "rgba(240,160,75,0.75)",
+            "font": {"color": "#f7f4ee"},
+        },
     )
     fig.update_xaxes(gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.08)")
     fig.update_yaxes(gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.08)", rangemode="tozero")
     return fig
 
 
-def bar_fig(labels, values, *, horizontal=False, color="#f0a04b", name="") -> go.Figure:
+def bar_fig(labels, values, *, horizontal=False, color="#f0a04b", name="", value_label="Units") -> go.Figure:
     fig = go.Figure()
     if horizontal:
-        fig.add_bar(y=labels, x=values, orientation="h", marker_color=color, name=name or "Units")
+        fig.add_bar(
+            y=labels,
+            x=values,
+            orientation="h",
+            marker_color=color,
+            name=name or value_label,
+            hovertemplate=f"<b>%{{y}}</b><br>{value_label}: <b>%{{x:,.0f}}</b><extra></extra>",
+        )
         fig.update_layout(yaxis={"autorange": "reversed"})
     else:
-        fig.add_bar(x=labels, y=values, marker_color=color, name=name or "Units")
+        fig.add_bar(
+            x=labels,
+            y=values,
+            marker_color=color,
+            name=name or value_label,
+            hovertemplate=f"<b>%{{x}}</b><br>{value_label}: <b>%{{y:,.0f}}</b><extra></extra>",
+        )
     return style_plot(fig)
 
 
@@ -160,50 +181,218 @@ def line_fig(labels, series: list[dict], height: int = 360) -> go.Figure:
 
 
 def apply_css() -> None:
+    """Centralized Streamlit theme for the Panem prototype.
+
+    This pass only changes the shell/layout styling. Forecasting, model, API,
+    database, and data pipeline logic are intentionally left untouched.
+    """
     st.markdown(
         """
         <style>
         :root {
-          --accent:#f0a04b; --accent2:#9bcf6b; --warn:#ff6b5a;
-          --ink:#f7f4ee; --muted:rgba(247,244,238,.65);
-          --glass:rgba(255,247,235,.10); --glass2:rgba(255,247,235,.18);
+          --accent:#f0a04b;
+          --accent-strong:#ffad55;
+          --accent2:#9bcf6b;
+          --warn:#ff6b5a;
+          --ink:#f7f4ee;
+          --muted:rgba(247,244,238,.68);
+          --muted2:rgba(247,244,238,.48);
+          --panel:rgba(255,247,235,.095);
+          --panel2:rgba(255,247,235,.155);
+          --line:rgba(255,255,255,.16);
+          --bg0:#050300;
+          --bg1:#0a0704;
+          --bg2:#140d06;
         }
+
         .stApp {
           color: var(--ink);
           background:
-            radial-gradient(at 20% 10%, rgba(243,217,181,.15), transparent 40%),
-            radial-gradient(at 80% 90%, rgba(201,138,74,.12), transparent 50%),
-            linear-gradient(135deg, #050300 0%, #0a0704 60%, #110d08 100%);
+            radial-gradient(at 18% 8%, rgba(243,217,181,.16), transparent 38%),
+            radial-gradient(at 86% 92%, rgba(201,138,74,.13), transparent 50%),
+            linear-gradient(135deg, var(--bg0) 0%, var(--bg1) 58%, var(--bg2) 100%);
         }
-        [data-testid="stSidebar"] {
-          background: rgba(20,12,4,.62);
-          border-right: 1px solid rgba(255,255,255,.18);
+
+        /* Keep the prototype dashboard-first: no sidebar navigation. */
+        [data-testid="stSidebar"], [data-testid="collapsedControl"] {
+          display: none !important;
         }
-        h1 { color:#fff; letter-spacing:-.3px; }
-        h2, h3 { color:var(--accent); text-transform:uppercase; letter-spacing:1.2px; }
+        .block-container {
+          max-width: 1440px;
+          padding-top: 1.1rem;
+          padding-bottom: 3rem;
+        }
+
+        h1 {
+          color:#fff;
+          letter-spacing:-.45px;
+          margin-bottom:.15rem;
+        }
+        h2, h3 {
+          color:var(--accent);
+          text-transform:uppercase;
+          letter-spacing:1.15px;
+        }
+        p, label, span, div { color: inherit; }
+        div[data-testid="stCaptionContainer"] { color: var(--muted); }
+
+        .panem-navbar {
+          position: sticky;
+          top: 0;
+          z-index: 999;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:18px;
+          margin:-.35rem 0 .75rem 0;
+          padding:13px 16px;
+          border:1px solid rgba(255,255,255,.18);
+          border-radius:20px;
+          background:linear-gradient(135deg, rgba(18,11,5,.94), rgba(7,4,1,.90));
+          box-shadow:0 18px 44px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14);
+          backdrop-filter: blur(14px);
+        }
+        .panem-brand {
+          display:flex;
+          align-items:center;
+          gap:11px;
+          min-width:190px;
+          color:#fff;
+          font-weight:900;
+          letter-spacing:2.4px;
+          font-size:18px;
+        }
+        .panem-mark {
+          width:34px;
+          height:34px;
+          border-radius:12px;
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          background:linear-gradient(135deg, var(--accent), #c96a00);
+          color:#1a0d00;
+          box-shadow:0 8px 22px rgba(240,160,75,.28);
+          font-weight:900;
+        }
+        .panem-nav-status {
+          display:flex;
+          align-items:center;
+          justify-content:flex-end;
+          gap:10px;
+          flex-wrap:wrap;
+          font-size:12px;
+          color:var(--muted);
+        }
+        .nav-pill, .modepill {
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          padding:7px 13px;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,.18);
+          font-size:11px;
+          text-transform:uppercase;
+          letter-spacing:1.25px;
+          font-weight:800;
+          color:var(--accent);
+          background:rgba(240,160,75,.14);
+          white-space:nowrap;
+        }
+        .nav-pill.neutral {
+          color:var(--ink);
+          background:rgba(255,255,255,.07);
+        }
+        .nav-pill.logout {
+          color:rgba(247,244,238,.72);
+          background:rgba(255,255,255,.05);
+        }
+        .nav-help {
+          margin:-.15rem 0 .35rem 0;
+          color:var(--muted2);
+          font-size:12px;
+        }
+
+        .control-strip {
+          margin:.45rem 0 1rem 0;
+          padding:14px 16px;
+          border:1px solid rgba(255,255,255,.16);
+          border-radius:20px;
+          background:linear-gradient(135deg, rgba(255,247,235,.10), rgba(255,247,235,.055));
+          box-shadow:0 12px 34px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.14);
+        }
+        .control-strip-title {
+          color:var(--muted);
+          font-size:11px;
+          letter-spacing:1.25px;
+          text-transform:uppercase;
+          font-weight:800;
+          margin-bottom:8px;
+        }
+
         div[data-testid="stMetric"], .glass-card {
-          background: var(--glass);
-          border: 1px solid rgba(255,255,255,.20);
+          background: var(--panel);
+          border: 1px solid rgba(255,255,255,.18);
           border-radius: 18px;
           padding: 16px 18px;
-          box-shadow: 0 8px 32px rgba(20,12,4,.25), inset 0 1px 0 rgba(255,255,255,.30);
+          box-shadow: 0 8px 32px rgba(20,12,4,.25), inset 0 1px 0 rgba(255,255,255,.22);
         }
         div[data-testid="stMetricValue"] { color:#fff; }
-        .modepill {
-          display:inline-flex; align-items:center; padding:6px 14px; border-radius:999px;
-          border:1px solid rgba(255,255,255,.22); font-size:11px; text-transform:uppercase;
-          letter-spacing:1.3px; font-weight:700; color:var(--accent);
-          background:rgba(240,160,75,.16);
-        }
+        div[data-testid="stMetricLabel"] { color:var(--muted); }
         .small-muted { color:var(--muted); font-size:12px; }
+
         .stDataFrame, div[data-testid="stDataFrame"] {
-          border: 1px solid rgba(255,255,255,.12); border-radius: 14px; overflow:hidden;
+          border: 1px solid rgba(255,255,255,.12);
+          border-radius: 14px;
+          overflow:hidden;
+        }
+
+        /* Streamlit controls: keep the native behavior, style the shell. */
+        .stSelectbox, .stDateInput, .stSlider, .stRadio, .stNumberInput, .stTextArea {
+          color:var(--ink);
+        }
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="input"] > div,
+        textarea {
+          background:rgba(255,255,255,.08) !important;
+          border-color:rgba(255,255,255,.18) !important;
+          border-radius:14px !important;
+          color:var(--ink) !important;
+        }
+        .stButton > button,
+        div[data-testid="stFormSubmitButton"] button {
+          width:100%;
+          border-radius:999px;
+          border:1px solid rgba(255,255,255,.18);
+          background:rgba(255,255,255,.07);
+          color:var(--ink);
+          font-weight:800;
+          letter-spacing:.25px;
+          transition:all .15s ease;
+        }
+        .stButton > button:hover,
+        div[data-testid="stFormSubmitButton"] button:hover {
+          border-color:rgba(240,160,75,.72);
+          color:#fff;
+          transform:translateY(-1px);
+          box-shadow:0 10px 24px rgba(240,160,75,.16);
+        }
+        .stButton > button[kind="primary"],
+        div[data-testid="stFormSubmitButton"] button[kind="primary"] {
+          color:#1b0e02;
+          background:linear-gradient(135deg, var(--accent), #c96a00);
+          border-color:rgba(240,160,75,.92);
+          box-shadow:0 10px 24px rgba(240,160,75,.22);
+        }
+        .stButton > button:disabled,
+        div[data-testid="stFormSubmitButton"] button:disabled {
+          opacity:.45;
+          transform:none;
+          box-shadow:none;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
-
 
 # Original route: /api/forecast, UI: templates/plan.html + static/js/plan.js
 def get_forecast(branch: str, bake_date: date) -> dict:
@@ -411,32 +600,163 @@ def lock_plan(branch: str, bake_date: date, user_id: int) -> None:
     )
 
 
+def allowed_pages_for_role(role: str) -> list[str]:
+    """Role-based navigation rules for the Streamlit shell.
+
+    Product is intentionally allowed as a hidden route for both roles because
+    the original dashboard opened Product from Recommended Bake instead of
+    exposing it as a primary navbar tab.
+    """
+    role_key = role.lower()
+    if role_key == "analyst":
+        return ["Bake Plan", "Product", "Analytics", "Model", "Feedback"]
+    return ["Bake Plan", "Product", "Analytics"]
+
+
+def init_session_state() -> None:
+    """Initialize UI state without touching business/data logic."""
+    st.session_state.setdefault("selected_role", "operator")
+    st.session_state.setdefault("selected_page", "Bake Plan")
+    st.session_state.setdefault("show_actuals_editor", False)
+    st.session_state.setdefault("product_branch", BRANCHES[0])
+    st.session_state.setdefault("product_sku", None)
+
+    allowed = allowed_pages_for_role(st.session_state.selected_role)
+    if st.session_state.selected_page not in allowed:
+        st.session_state.selected_page = "Bake Plan"
+
+
 def active_user() -> dict:
-    df = read_sql("select id, username, role from user order by role, username")
+    """Resolve a database user for the selected role.
+
+    The original Streamlit prototype selected a specific DB user from the sidebar.
+    The reviewed dashboard flow uses role buttons instead. To preserve all write
+    logic that needs user_id, this function maps the selected role to the first
+    matching user in the existing `user` table.
+    """
+    role_key = st.session_state.get("selected_role", "operator").lower()
+    df = read_sql(
+        "select id, username, role from user where lower(role) = ? order by username",
+        (role_key,),
+    )
     if df.empty:
-        return {"id": 1, "username": "operator", "role": "operator"}
-    names = [f"{r.username} ({r.role})" for r in df.itertuples()]
-    choice = st.sidebar.selectbox("User", names, index=min(1, len(names) - 1))
-    row = df.iloc[names.index(choice)]
+        fallback = read_sql("select id, username, role from user order by role, username limit 1")
+        if fallback.empty:
+            return {"id": 1, "username": role_key, "role": role_key}
+        row = fallback.iloc[0]
+    else:
+        row = df.iloc[0]
     return {"id": int(row["id"]), "username": row["username"], "role": row["role"]}
+
+
+def set_role(role: str) -> None:
+    role_key = role.lower()
+    st.session_state.selected_role = role_key
+    if st.session_state.selected_page not in allowed_pages_for_role(role_key):
+        st.session_state.selected_page = "Bake Plan"
+
+
+def render_top_navbar(user: dict) -> None:
+    """Top dashboard shell replacing sidebar navigation."""
+    role_label = st.session_state.selected_role.title()
+    active_page = st.session_state.selected_page
+    allowed_pages = allowed_pages_for_role(st.session_state.selected_role)
+
+    st.markdown(
+        f"""
+        <div class="panem-navbar">
+          <div class="panem-brand"><span class="panem-mark">P</span><span>PANEM</span></div>
+          <div class="panem-nav-status">
+            <span class="nav-pill">{active_page}</span>
+            <span class="nav-pill neutral">{user['username']} · {role_label}</span>
+            <span class="nav-pill neutral">{now():%a, %b %d · %H:%M}</span>
+            <span class="nav-pill logout">Logout</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='nav-help'>Role and page navigation</div>", unsafe_allow_html=True)
+    role_cols = st.columns([0.9, 0.9, 0.25, 1, 1, 1, 1, 1.8])
+    with role_cols[0]:
+        if st.button("Operator", type="primary" if st.session_state.selected_role == "operator" else "secondary", key="nav_role_operator"):
+            set_role("operator")
+            st.rerun()
+    with role_cols[1]:
+        if st.button("Analyst", type="primary" if st.session_state.selected_role == "analyst" else "secondary", key="nav_role_analyst"):
+            set_role("analyst")
+            st.rerun()
+
+    for i, page_name in enumerate(["Bake Plan", "Analytics", "Model", "Feedback"], start=3):
+        with role_cols[i]:
+            disabled = page_name not in allowed_pages
+            if st.button(page_name, type="primary" if active_page == page_name else "secondary", disabled=disabled, key=f"nav_page_{page_name}"):
+                st.session_state.selected_page = page_name
+                st.rerun()
+
+
+def dataframe_selected_rows(event) -> list[int]:
+    """Return selected row positions from Streamlit dataframe events safely."""
+    if event is None:
+        return []
+    try:
+        if isinstance(event, dict):
+            return event.get("selection", {}).get("rows", []) or []
+        selection = getattr(event, "selection", None)
+        if selection is None:
+            return []
+        if isinstance(selection, dict):
+            return selection.get("rows", []) or []
+        return getattr(selection, "rows", []) or []
+    except Exception:
+        return []
+
+
+def open_product_detail(branch: str, sku: str) -> None:
+    """Navigate to the hidden Product route using the selected product context."""
+    st.session_state.product_branch = branch
+    st.session_state.product_sku = sku
+    st.session_state.selected_page = "Product"
+    st.rerun()
 
 
 def render_bake_plan(user: dict) -> None:
     # Original page: templates/plan.html. Original JS/API: static/js/plan.js + /api/forecast.
+    # UI-only refactor: controls/actions moved to top; business logic is preserved.
     st.title("Weekly bake plan")
-    st.caption("Streamlit equivalent of `/`, `plan.html`, and `plan.js`.")
+    st.caption("Operator workflow for weekly production recommendations.")
 
-    c1, c2, c3 = st.columns([1, 1, 1])
+    st.markdown("<div class='control-strip-title'>Bake plan controls</div>", unsafe_allow_html=True)
+    c1, c2, c3, c4, c5, c6, c7 = st.columns([1.35, 1.15, 1.35, .9, 1.0, 1.18, 1.55])
     with c1:
-        branch = st.selectbox("Branch", BRANCHES, index=0)
+        branch = st.selectbox("Branch", BRANCHES, index=0, key="bake_branch")
     with c2:
-        selected_date = st.date_input("Bake date", default_bake_date())
+        selected_date = st.date_input("Bake date", default_bake_date(), key="bake_date")
     with c3:
-        min_conf = st.slider("Min confidence (lower bound %)", 0, 100, 0)
+        min_conf = st.slider("Min confidence", 0, 100, 0, help="Lower bound confidence threshold (%)", key="bake_min_conf")
 
     data = get_forecast(branch, selected_date)
     rows = data["rows"]
-    st.markdown(f"<span class='modepill'>{data['mode']}</span>", unsafe_allow_html=True)
+
+    with c4:
+        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
+        st.markdown(f"<span class='modepill'>{data['mode']}</span>", unsafe_allow_html=True)
+    with c5:
+        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
+        if st.button("Log Actuals", key="top_log_actuals"):
+            st.session_state.show_actuals_editor = not st.session_state.get("show_actuals_editor", False)
+    with c6:
+        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
+        if st.button("Generate forecast", help="Runs the same batch.forecast module used by the FastAPI app.", key="top_generate_forecast"):
+            run_forecast_generation()
+    with c7:
+        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
+        if st.button("Lock plan & send to oven", disabled=data["mode"] != "plan" or data["is_locked"], key="top_lock_plan"):
+            lock_plan(branch, selected_date, user["id"])
+            st.success("Plan locked.")
+            st.rerun()
+
     st.caption(f"{branch} · {fmt_date(data['week_start'])} - {fmt_date(data['week_end'])}")
 
     if data["is_locked"]:
@@ -457,7 +777,7 @@ def render_bake_plan(user: dict) -> None:
     with left:
         st.subheader("Recommended bake")
         if rows.empty:
-            st.warning("No forecasts for this branch/date. Run forecast generation from the controls below.")
+            st.warning("No forecasts for this branch/date. Run forecast generation from the top controls.")
         else:
             display = rows.copy()
             display["certainty_pct"] = display.apply(
@@ -468,20 +788,54 @@ def render_bake_plan(user: dict) -> None:
             display["recommended"] = display.apply(lambda r: r["override"] if pd.notna(r["override"]) else r["next7_pred"], axis=1)
             display["CI 80%"] = display.apply(lambda r: f"{fmt_int(r['next7_lo'])}-{fmt_int(r['next7_hi'])}", axis=1)
             display["stockout_risk"] = display.apply(lambda r: bool((r["last_week_total"] or 0) > r["next7_lo"]), axis=1)
-            st.dataframe(
-                display[["sku", "item_name", "last_week_total", "recommended", "next7_pred", "CI 80%", "override_reason", "stockout_risk"]],
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "sku": "SKU",
-                    "item_name": "Item",
-                    "last_week_total": "Last 7d sold",
-                    "recommended": "Next 7d pred.",
-                    "next7_pred": "Model pred.",
-                    "override_reason": "Reason",
-                    "stockout_risk": "Risk",
-                },
-            )
+            recommended_view = display[["sku", "item_name", "last_week_total", "recommended", "next7_pred", "CI 80%", "override_reason", "stockout_risk"]].copy()
+            st.caption("Select one product row to open its Product detail view, matching the original dashboard flow.")
+            try:
+                table_event = st.dataframe(
+                    recommended_view,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "sku": "SKU",
+                        "item_name": "Item",
+                        "last_week_total": "Last 7d sold",
+                        "recommended": "Next 7d pred.",
+                        "next7_pred": "Model pred.",
+                        "override_reason": "Reason",
+                        "stockout_risk": "Risk",
+                    },
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="recommended_bake_table",
+                )
+                selected_rows = dataframe_selected_rows(table_event)
+                if selected_rows:
+                    selected_sku = str(recommended_view.iloc[selected_rows[0]]["sku"])
+                    open_product_detail(branch, selected_sku)
+            except TypeError:
+                # Compatibility fallback for older Streamlit versions without dataframe row selection.
+                st.dataframe(
+                    recommended_view,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "sku": "SKU",
+                        "item_name": "Item",
+                        "last_week_total": "Last 7d sold",
+                        "recommended": "Next 7d pred.",
+                        "next7_pred": "Model pred.",
+                        "override_reason": "Reason",
+                        "stockout_risk": "Risk",
+                    },
+                )
+                detail_sku = st.selectbox(
+                    "Open product detail",
+                    recommended_view["sku"].tolist(),
+                    format_func=lambda s: f"{s} · {recommended_view.loc[recommended_view['sku'] == s, 'item_name'].iloc[0]}",
+                    key="product_detail_fallback_select",
+                )
+                if st.button("Open Product detail", key="open_product_detail_fallback"):
+                    open_product_detail(branch, str(detail_sku))
 
             st.markdown("#### Override prediction")
             ov_row = st.selectbox(
@@ -522,41 +876,35 @@ def render_bake_plan(user: dict) -> None:
             use_container_width=True,
         )
 
-    st.subheader("Log daily actuals")
-    if not rows.empty:
-        actual_day = st.selectbox("Day", date_range(data["week_start"], data["week_end"]), format_func=lambda d: f"{d:%a %Y-%m-%d}")
-        actual_existing = read_sql(
-            "select sku, qty_sold, qty_wasted from actual where branch = ? and bake_date = ?",
-            (branch, actual_day.isoformat()),
-        )
-        existing_map = actual_existing.set_index("sku").to_dict("index") if not actual_existing.empty else {}
-        ac_rows = []
-        for _, r in rows.iterrows():
-            daily = next((d for d in r["daily"] if d["date"] == actual_day.isoformat()), {})
-            ex = existing_map.get(r["sku"], {})
-            ac_rows.append({
-                "sku": r["sku"],
-                "item": r["item_name"],
-                "predicted": daily.get("pred", 0),
-                "sold": float(ex.get("qty_sold", 0) or 0),
-                "wasted": float(ex.get("qty_wasted", 0) or 0),
-            })
-        edited = st.data_editor(pd.DataFrame(ac_rows), use_container_width=True, hide_index=True, disabled=["sku", "item", "predicted"])
-        if st.button("Save this day"):
-            for r in edited.to_dict("records"):
-                if r["sold"] or r["wasted"]:
-                    upsert_actual(branch, r["sku"], actual_day, float(r["sold"]), float(r["wasted"]), user["id"])
-            st.success(f"Saved actuals for {actual_day.isoformat()}.")
-            st.rerun()
-
-    st.subheader("Plan actions")
-    a, b = st.columns(2)
-    if a.button("Lock plan & send to oven", disabled=data["mode"] != "plan" or data["is_locked"]):
-        lock_plan(branch, selected_date, user["id"])
-        st.success("Plan locked.")
-        st.rerun()
-    if b.button("Generate forecast", help="Runs the same batch.forecast module used by the FastAPI app."):
-        run_forecast_generation()
+    if st.session_state.get("show_actuals_editor", False):
+        st.subheader("Log daily actuals")
+        if not rows.empty:
+            actual_day = st.selectbox("Day", date_range(data["week_start"], data["week_end"]), format_func=lambda d: f"{d:%a %Y-%m-%d}")
+            actual_existing = read_sql(
+                "select sku, qty_sold, qty_wasted from actual where branch = ? and bake_date = ?",
+                (branch, actual_day.isoformat()),
+            )
+            existing_map = actual_existing.set_index("sku").to_dict("index") if not actual_existing.empty else {}
+            ac_rows = []
+            for _, r in rows.iterrows():
+                daily = next((d for d in r["daily"] if d["date"] == actual_day.isoformat()), {})
+                ex = existing_map.get(r["sku"], {})
+                ac_rows.append({
+                    "sku": r["sku"],
+                    "item": r["item_name"],
+                    "predicted": daily.get("pred", 0),
+                    "sold": float(ex.get("qty_sold", 0) or 0),
+                    "wasted": float(ex.get("qty_wasted", 0) or 0),
+                })
+            edited = st.data_editor(pd.DataFrame(ac_rows), use_container_width=True, hide_index=True, disabled=["sku", "item", "predicted"])
+            if st.button("Save this day", key="save_actuals_day"):
+                for r in edited.to_dict("records"):
+                    if r["sold"] or r["wasted"]:
+                        upsert_actual(branch, r["sku"], actual_day, float(r["sold"]), float(r["wasted"]), user["id"])
+                st.success(f"Saved actuals for {actual_day.isoformat()}.")
+                st.rerun()
+        else:
+            st.info("No forecast rows are available for actuals logging.")
 
 
 # Original route: /api/product/{sku}/deep-dive, UI: templates/product.html + static/js/product.js
@@ -705,8 +1053,19 @@ def sku_options(branch: str) -> pd.DataFrame:
 
 def render_product(user: dict) -> None:
     # Original page: templates/product.html. Original JS/API: static/js/product.js + /api/product/{sku}/deep-dive.
-    st.title("Product")
-    st.caption("Streamlit equivalent of `/product/{sku}`, `product.html`, and `product.js`.")
+    top_left, top_right = st.columns([5, 1])
+    with top_left:
+        st.title("Product")
+        st.caption("Opened from Recommended Bake, matching the original product deep-dive flow.")
+    with top_right:
+        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
+        if st.button("← Bake Plan", key="product_back_to_bake_plan"):
+            st.session_state.selected_page = "Bake Plan"
+            st.rerun()
+
+    if st.session_state.get("product_branch") not in BRANCHES:
+        st.session_state.product_branch = BRANCHES[0]
+
     c1, c2 = st.columns(2)
     with c1:
         branch = st.selectbox("Branch", BRANCHES, key="product_branch")
@@ -714,8 +1073,13 @@ def render_product(user: dict) -> None:
     if options.empty:
         st.warning("No SKUs found for this branch.")
         return
+
+    sku_values = options["sku"].tolist()
+    if st.session_state.get("product_sku") not in sku_values:
+        st.session_state.product_sku = sku_values[0]
+
     with c2:
-        sku = st.selectbox("SKU", options["sku"].tolist(), format_func=lambda s: f"{s} · {options.loc[options['sku'] == s, 'item_name'].iloc[0]}")
+        sku = st.selectbox("Item", sku_values, format_func=lambda s: f"{s} · {options.loc[options['sku'] == s, 'item_name'].iloc[0]}", key="product_sku")
 
     data = get_product_deep_dive(sku, branch)
     if not data:
@@ -986,7 +1350,15 @@ def render_analytics() -> None:
         if not wd.empty:
             for i, product_name in enumerate(wd["item_name"].unique()):
                 subset = wd[wd["item_name"] == product_name].set_index("dow")
-                fig.add_bar(x=DOW_ORDER, y=[subset["qty"].get(d, 0) for d in DOW_ORDER], name=product_name, marker_color=BRANCH_PALETTE[i % len(BRANCH_PALETTE)])
+                qty_values = [subset["qty"].get(d, 0) for d in DOW_ORDER]
+                fig.add_bar(
+                    x=DOW_ORDER,
+                    y=qty_values,
+                    name=product_name,
+                    customdata=[product_name] * len(DOW_ORDER),
+                    marker_color=BRANCH_PALETTE[i % len(BRANCH_PALETTE)],
+                    hovertemplate="<b>%{customdata}</b><br>Day: %{x}<br>Units: <b>%{y:,.0f}</b><extra></extra>",
+                )
         st.plotly_chart(style_plot(fig), use_container_width=True)
     with c2:
         st.subheader("Weather Impact")
@@ -1123,8 +1495,20 @@ def render_model() -> None:
         st.subheader("MAE by SKU volume bucket")
         mb = mae_by_bucket()
         fig = go.Figure()
-        fig.add_bar(x=mb["bucket"], y=mb["prophet"], name="Prophet", marker_color="#f0a04b")
-        fig.add_bar(x=mb["bucket"], y=mb["naive"], name="Naive", marker_color="rgba(255,255,255,0.25)")
+        fig.add_bar(
+            x=mb["bucket"],
+            y=mb["prophet"],
+            name="Prophet",
+            marker_color="#f0a04b",
+            hovertemplate="<b>Prophet</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
+        )
+        fig.add_bar(
+            x=mb["bucket"],
+            y=mb["naive"],
+            name="Naive",
+            marker_color="rgba(255,255,255,0.25)",
+            hovertemplate="<b>Naive</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
+        )
         st.plotly_chart(style_plot(fig), use_container_width=True)
     with c2:
         st.subheader("Residual distribution")
@@ -1262,18 +1646,13 @@ def run_retrain() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Panem · Streamlit Prototype", layout="wide", initial_sidebar_state="expanded")
+    st.set_page_config(page_title="Panem · Streamlit Prototype", layout="wide", initial_sidebar_state="collapsed")
     apply_css()
-    st.sidebar.markdown("## PANEM")
+    init_session_state()
     user = active_user()
-    st.sidebar.caption(f"{user['username']} · {user['role']} · {now():%a, %b %d %H:%M}")
-    pages = ["Bake Plan", "Product", "Analytics"]
-    if user["role"] == "analyst":
-        pages += ["Model", "Feedback"]
-    page = st.sidebar.radio("Navigation", pages)
-    st.sidebar.markdown("---")
-    st.sidebar.caption("Faithful Streamlit conversion. Original FastAPI/Jinja/JS files are not modified.")
+    render_top_navbar(user)
 
+    page = st.session_state.selected_page
     if page == "Bake Plan":
         render_bake_plan(user)
     elif page == "Product":
@@ -1284,6 +1663,9 @@ def main() -> None:
         render_model()
     elif page == "Feedback":
         render_feedback()
+    else:
+        st.session_state.selected_page = "Bake Plan"
+        st.rerun()
 
 
 if __name__ == "__main__":
