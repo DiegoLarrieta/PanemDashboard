@@ -1,8 +1,9 @@
 .venv/
 __pycache__/
 *.pyc
-panem.db
 panem.db-journal
 .env
 models/v*/
 .DS_Store
+presentation (1).html
+presentation_models.html

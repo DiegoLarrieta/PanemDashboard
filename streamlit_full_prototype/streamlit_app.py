@@ -788,66 +788,82 @@ def render_bake_plan(user: dict) -> None:
             display["recommended"] = display.apply(lambda r: r["override"] if pd.notna(r["override"]) else r["next7_pred"], axis=1)
             display["CI 80%"] = display.apply(lambda r: f"{fmt_int(r['next7_lo'])}-{fmt_int(r['next7_hi'])}", axis=1)
             display["stockout_risk"] = display.apply(lambda r: bool((r["last_week_total"] or 0) > r["next7_lo"]), axis=1)
-            reason_options = ["weather", "local_event", "promo", "gut_feel", "other"]
-            popover = st.popover if hasattr(st, "popover") else st.expander
-            h1, h2, h3, h4, h5 = st.columns([1.45, .58, .7, .7, .84])
-            h1.caption("SKU / ITEM")
-            h2.caption("LAST 7D")
-            h3.caption("NEXT 7D")
-            h4.caption("CI 80%")
-            h5.caption("OVERRIDE")
-            for row_number, (_, r) in enumerate(display.iterrows()):
-                row_key = f"{branch}_{selected_date}_{r['id']}_{row_number}"
-                c1, c2, c3, c4, c5 = st.columns([1.45, .58, .7, .7, .84])
-                with c1:
-                    st.markdown(f"**{r['sku']}**")
-                    st.caption(str(r["item_name"]))
-                c2.markdown(f"**{fmt_int(r['last_week_total'])}**")
-                c3.markdown(f"**{fmt_int(r['next7_pred'])}**")
-                c4.markdown(f"**{r['CI 80%']}**")
+            recommended_view = display[["sku", "item_name", "last_week_total", "recommended", "next7_pred", "CI 80%", "override_reason", "stockout_risk"]].copy()
+            st.caption("Select one product row to open its Product detail view, matching the original dashboard flow.")
+            try:
+                table_event = st.dataframe(
+                    recommended_view,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "sku": "SKU",
+                        "item_name": "Item",
+                        "last_week_total": "Last 7d sold",
+                        "recommended": "Next 7d pred.",
+                        "next7_pred": "Model pred.",
+                        "override_reason": "Reason",
+                        "stockout_risk": "Risk",
+                    },
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="recommended_bake_table",
+                )
+                selected_rows = dataframe_selected_rows(table_event)
+                if selected_rows:
+                    selected_sku = str(recommended_view.iloc[selected_rows[0]]["sku"])
+                    open_product_detail(branch, selected_sku)
+            except TypeError:
+                # Compatibility fallback for older Streamlit versions without dataframe row selection.
+                st.dataframe(
+                    recommended_view,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "sku": "SKU",
+                        "item_name": "Item",
+                        "last_week_total": "Last 7d sold",
+                        "recommended": "Next 7d pred.",
+                        "next7_pred": "Model pred.",
+                        "override_reason": "Reason",
+                        "stockout_risk": "Risk",
+                    },
+                )
+                detail_sku = st.selectbox(
+                    "Open product detail",
+                    recommended_view["sku"].tolist(),
+                    format_func=lambda s: f"{s} · {recommended_view.loc[recommended_view['sku'] == s, 'item_name'].iloc[0]}",
+                    key="product_detail_fallback_select",
+                )
+                if st.button("Open Product detail", key="open_product_detail_fallback"):
+                    open_product_detail(branch, str(detail_sku))
 
-                override_key = f"plan_override_units_{row_key}"
-                with c5:
-                    st.number_input(
-                        f"Override units for {r['sku']}",
-                        min_value=0.0,
-                        value=float(r["recommended"]),
-                        step=1.0,
-                        label_visibility="collapsed",
-                        disabled=data["mode"] != "plan",
-                        key=override_key,
-                    )
+            #prediction-------
 
-                action_col, detail_col, spacer_col = st.columns([.72, .42, 2.86])
-                with action_col:
-                    with popover("reason"):
-                        st.markdown("#### Override production")
-                        st.caption("SKU")
-                        st.write(f"{r['sku']} - {r['item_name']}")
-                        units = float(st.session_state.get(override_key, r["recommended"]))
-                        st.caption("Override units")
-                        st.write(fmt_int(units))
-                        reason_value = r["override_reason"] if pd.notna(r["override_reason"]) else "gut_feel"
-                        reason_index = reason_options.index(reason_value) if reason_value in reason_options else 3
-                        reason = st.selectbox("Reason", reason_options, index=reason_index, key=f"plan_override_reason_{row_key}")
-                        note = st.text_area("Note (optional)", height=80, key=f"plan_override_note_{row_key}")
-                        if st.button("Save override", disabled=data["mode"] != "plan", key=f"save_override_{row_key}"):
-                            upsert_override(int(r["id"]), units, reason, note, user["id"])
-                            st.success("Override saved.")
-                            st.rerun()
-                        if st.button("Delete override", disabled=data["mode"] != "plan", key=f"delete_override_{row_key}"):
-                            delete_override(int(r["id"]))
-                            st.info("Override deleted.")
-                            st.rerun()
-
-                with detail_col:
-                    if st.button("🔍", help="Open product detail", key=f"open_product_detail_{row_key}"):
-                        open_product_detail(branch, str(r["sku"]))
-
-                if row_number < len(display) - 1:
-                    st.divider()
+            st.markdown("#### Override prediction")
+            ov_row = st.selectbox(
+                "SKU to override",
+                rows["sku"].tolist(),
+                format_func=lambda s: f"{s} · {rows.loc[rows['sku'] == s, 'item_name'].iloc[0]}",
+            )
+            selected = rows.loc[rows["sku"] == ov_row].iloc[0]
+            with st.form("plan_override_form"):
+                units = st.number_input("Override units", min_value=0.0, value=float(selected["override"] if pd.notna(selected["override"]) else selected["next7_pred"]), step=1.0)
+                reason = st.selectbox("Reason", ["weather", "local_event", "promo", "gut_feel", "other"], index=3)
+                note = st.text_area("Note (optional)", height=80)
+                a, b = st.columns(2)
+                save = a.form_submit_button("Save override", disabled=data["mode"] != "plan")
+                clear = b.form_submit_button("Delete override", disabled=data["mode"] != "plan")
+            if save:
+                upsert_override(int(selected["id"]), units, reason, note, user["id"])
+                st.success("Override saved.")
+                st.rerun()
+            if clear:
+                delete_override(int(selected["id"]))
+                st.info("Override deleted.")
+                st.rerun()
 
     with right:
+        
         st.subheader("Units by branch")
         summary = branches_summary(data["week_start"])
         if not summary.empty:
