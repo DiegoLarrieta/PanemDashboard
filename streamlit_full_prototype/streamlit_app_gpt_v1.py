@@ -126,41 +126,20 @@ def style_plot(fig: go.Figure, height: int = 360) -> go.Figure:
         font={"color": "#f7f4ee", "size": 12},
         margin={"l": 30, "r": 20, "t": 25, "b": 45},
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
-        # Avoid Plotly's unified hover because it shows all bars/traces
-        # that share the same x-axis value. Operators need the exact bar
-        # under the cursor, especially in Top Products and Weekday Demand.
-        hovermode="closest",
-        hoverlabel={
-            "bgcolor": "rgba(20,13,6,0.96)",
-            "bordercolor": "rgba(240,160,75,0.75)",
-            "font": {"color": "#f7f4ee"},
-        },
+        hovermode="x unified",
     )
     fig.update_xaxes(gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.08)")
     fig.update_yaxes(gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.08)", rangemode="tozero")
     return fig
 
 
-def bar_fig(labels, values, *, horizontal=False, color="#f0a04b", name="", value_label="Units") -> go.Figure:
+def bar_fig(labels, values, *, horizontal=False, color="#f0a04b", name="") -> go.Figure:
     fig = go.Figure()
     if horizontal:
-        fig.add_bar(
-            y=labels,
-            x=values,
-            orientation="h",
-            marker_color=color,
-            name=name or value_label,
-            hovertemplate=f"<b>%{{y}}</b><br>{value_label}: <b>%{{x:,.0f}}</b><extra></extra>",
-        )
+        fig.add_bar(y=labels, x=values, orientation="h", marker_color=color, name=name or "Units")
         fig.update_layout(yaxis={"autorange": "reversed"})
     else:
-        fig.add_bar(
-            x=labels,
-            y=values,
-            marker_color=color,
-            name=name or value_label,
-            hovertemplate=f"<b>%{{x}}</b><br>{value_label}: <b>%{{y:,.0f}}</b><extra></extra>",
-        )
+        fig.add_bar(x=labels, y=values, marker_color=color, name=name or "Units")
     return style_plot(fig)
 
 
@@ -601,16 +580,11 @@ def lock_plan(branch: str, bake_date: date, user_id: int) -> None:
 
 
 def allowed_pages_for_role(role: str) -> list[str]:
-    """Role-based navigation rules for the Streamlit shell.
-
-    Product is intentionally allowed as a hidden route for both roles because
-    the original dashboard opened Product from Recommended Bake instead of
-    exposing it as a primary navbar tab.
-    """
+    """Role-based navigation rules for the Streamlit shell."""
     role_key = role.lower()
     if role_key == "analyst":
-        return ["Bake Plan", "Product", "Analytics", "Model", "Feedback"]
-    return ["Bake Plan", "Product", "Analytics"]
+        return ["Bake Plan", "Analytics", "Model", "Feedback"]
+    return ["Bake Plan", "Analytics"]
 
 
 def init_session_state() -> None:
@@ -618,8 +592,6 @@ def init_session_state() -> None:
     st.session_state.setdefault("selected_role", "operator")
     st.session_state.setdefault("selected_page", "Bake Plan")
     st.session_state.setdefault("show_actuals_editor", False)
-    st.session_state.setdefault("product_branch", BRANCHES[0])
-    st.session_state.setdefault("product_sku", None)
 
     allowed = allowed_pages_for_role(st.session_state.selected_role)
     if st.session_state.selected_page not in allowed:
@@ -696,31 +668,6 @@ def render_top_navbar(user: dict) -> None:
                 st.rerun()
 
 
-def dataframe_selected_rows(event) -> list[int]:
-    """Return selected row positions from Streamlit dataframe events safely."""
-    if event is None:
-        return []
-    try:
-        if isinstance(event, dict):
-            return event.get("selection", {}).get("rows", []) or []
-        selection = getattr(event, "selection", None)
-        if selection is None:
-            return []
-        if isinstance(selection, dict):
-            return selection.get("rows", []) or []
-        return getattr(selection, "rows", []) or []
-    except Exception:
-        return []
-
-
-def open_product_detail(branch: str, sku: str) -> None:
-    """Navigate to the hidden Product route using the selected product context."""
-    st.session_state.product_branch = branch
-    st.session_state.product_sku = sku
-    st.session_state.selected_page = "Product"
-    st.rerun()
-
-
 def render_bake_plan(user: dict) -> None:
     # Original page: templates/plan.html. Original JS/API: static/js/plan.js + /api/forecast.
     # UI-only refactor: controls/actions moved to top; business logic is preserved.
@@ -773,7 +720,7 @@ def render_bake_plan(user: dict) -> None:
     k4.metric("Stock-out risk SKUs", fmt_int(data["kpis"]["stockout_risk_skus"]), help="Last week > lower CI")
     k5.metric("Recorded waste rate", "-" if data["kpis"]["waste_rate"] is None else f"{data['kpis']['waste_rate'] * 100:.1f}%")
 
-    left, right = st.columns(2)
+    left, right = st.columns([2, 1])
     with left:
         st.subheader("Recommended bake")
         if rows.empty:
@@ -788,64 +735,43 @@ def render_bake_plan(user: dict) -> None:
             display["recommended"] = display.apply(lambda r: r["override"] if pd.notna(r["override"]) else r["next7_pred"], axis=1)
             display["CI 80%"] = display.apply(lambda r: f"{fmt_int(r['next7_lo'])}-{fmt_int(r['next7_hi'])}", axis=1)
             display["stockout_risk"] = display.apply(lambda r: bool((r["last_week_total"] or 0) > r["next7_lo"]), axis=1)
-            reason_options = ["weather", "local_event", "promo", "gut_feel", "other"]
-            popover = st.popover if hasattr(st, "popover") else st.expander
-            h1, h2, h3, h4, h5 = st.columns([1.45, .58, .7, .7, .84])
-            h1.caption("SKU / ITEM")
-            h2.caption("LAST 7D")
-            h3.caption("NEXT 7D")
-            h4.caption("CI 80%")
-            h5.caption("OVERRIDE")
-            for row_number, (_, r) in enumerate(display.iterrows()):
-                row_key = f"{branch}_{selected_date}_{r['id']}_{row_number}"
-                c1, c2, c3, c4, c5 = st.columns([1.45, .58, .7, .7, .84])
-                with c1:
-                    st.markdown(f"**{r['sku']}**")
-                    st.caption(str(r["item_name"]))
-                c2.markdown(f"**{fmt_int(r['last_week_total'])}**")
-                c3.markdown(f"**{fmt_int(r['next7_pred'])}**")
-                c4.markdown(f"**{r['CI 80%']}**")
+            st.dataframe(
+                display[["sku", "item_name", "last_week_total", "recommended", "next7_pred", "CI 80%", "override_reason", "stockout_risk"]],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "sku": "SKU",
+                    "item_name": "Item",
+                    "last_week_total": "Last 7d sold",
+                    "recommended": "Next 7d pred.",
+                    "next7_pred": "Model pred.",
+                    "override_reason": "Reason",
+                    "stockout_risk": "Risk",
+                },
+            )
 
-                override_key = f"plan_override_units_{row_key}"
-                with c5:
-                    st.number_input(
-                        f"Override units for {r['sku']}",
-                        min_value=0.0,
-                        value=float(r["recommended"]),
-                        step=1.0,
-                        label_visibility="collapsed",
-                        disabled=data["mode"] != "plan",
-                        key=override_key,
-                    )
-
-                action_col, detail_col, spacer_col = st.columns([.72, .42, 2.86])
-                with action_col:
-                    with popover("reason"):
-                        st.markdown("#### Override production")
-                        st.caption("SKU")
-                        st.write(f"{r['sku']} - {r['item_name']}")
-                        units = float(st.session_state.get(override_key, r["recommended"]))
-                        st.caption("Override units")
-                        st.write(fmt_int(units))
-                        reason_value = r["override_reason"] if pd.notna(r["override_reason"]) else "gut_feel"
-                        reason_index = reason_options.index(reason_value) if reason_value in reason_options else 3
-                        reason = st.selectbox("Reason", reason_options, index=reason_index, key=f"plan_override_reason_{row_key}")
-                        note = st.text_area("Note (optional)", height=80, key=f"plan_override_note_{row_key}")
-                        if st.button("Save override", disabled=data["mode"] != "plan", key=f"save_override_{row_key}"):
-                            upsert_override(int(r["id"]), units, reason, note, user["id"])
-                            st.success("Override saved.")
-                            st.rerun()
-                        if st.button("Delete override", disabled=data["mode"] != "plan", key=f"delete_override_{row_key}"):
-                            delete_override(int(r["id"]))
-                            st.info("Override deleted.")
-                            st.rerun()
-
-                with detail_col:
-                    if st.button("🔍", help="Open product detail", key=f"open_product_detail_{row_key}"):
-                        open_product_detail(branch, str(r["sku"]))
-
-                if row_number < len(display) - 1:
-                    st.divider()
+            st.markdown("#### Override prediction")
+            ov_row = st.selectbox(
+                "SKU to override",
+                rows["sku"].tolist(),
+                format_func=lambda s: f"{s} · {rows.loc[rows['sku'] == s, 'item_name'].iloc[0]}",
+            )
+            selected = rows.loc[rows["sku"] == ov_row].iloc[0]
+            with st.form("plan_override_form"):
+                units = st.number_input("Override units", min_value=0.0, value=float(selected["override"] if pd.notna(selected["override"]) else selected["next7_pred"]), step=1.0)
+                reason = st.selectbox("Reason", ["weather", "local_event", "promo", "gut_feel", "other"], index=3)
+                note = st.text_area("Note (optional)", height=80)
+                a, b = st.columns(2)
+                save = a.form_submit_button("Save override", disabled=data["mode"] != "plan")
+                clear = b.form_submit_button("Delete override", disabled=data["mode"] != "plan")
+            if save:
+                upsert_override(int(selected["id"]), units, reason, note, user["id"])
+                st.success("Override saved.")
+                st.rerun()
+            if clear:
+                delete_override(int(selected["id"]))
+                st.info("Override deleted.")
+                st.rerun()
 
     with right:
         st.subheader("Units by branch")
@@ -1040,19 +966,8 @@ def sku_options(branch: str) -> pd.DataFrame:
 
 def render_product(user: dict) -> None:
     # Original page: templates/product.html. Original JS/API: static/js/product.js + /api/product/{sku}/deep-dive.
-    top_left, top_right = st.columns([5, 1])
-    with top_left:
-        st.title("Product")
-        st.caption("Opened from Recommended Bake, matching the original product deep-dive flow.")
-    with top_right:
-        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
-        if st.button("← Bake Plan", key="product_back_to_bake_plan"):
-            st.session_state.selected_page = "Bake Plan"
-            st.rerun()
-
-    if st.session_state.get("product_branch") not in BRANCHES:
-        st.session_state.product_branch = BRANCHES[0]
-
+    st.title("Product")
+    st.caption("Streamlit equivalent of `/product/{sku}`, `product.html`, and `product.js`.")
     c1, c2 = st.columns(2)
     with c1:
         branch = st.selectbox("Branch", BRANCHES, key="product_branch")
@@ -1060,13 +975,8 @@ def render_product(user: dict) -> None:
     if options.empty:
         st.warning("No SKUs found for this branch.")
         return
-
-    sku_values = options["sku"].tolist()
-    if st.session_state.get("product_sku") not in sku_values:
-        st.session_state.product_sku = sku_values[0]
-
     with c2:
-        sku = st.selectbox("Item", sku_values, format_func=lambda s: f"{s} · {options.loc[options['sku'] == s, 'item_name'].iloc[0]}", key="product_sku")
+        sku = st.selectbox("SKU", options["sku"].tolist(), format_func=lambda s: f"{s} · {options.loc[options['sku'] == s, 'item_name'].iloc[0]}")
 
     data = get_product_deep_dive(sku, branch)
     if not data:
@@ -1337,15 +1247,7 @@ def render_analytics() -> None:
         if not wd.empty:
             for i, product_name in enumerate(wd["item_name"].unique()):
                 subset = wd[wd["item_name"] == product_name].set_index("dow")
-                qty_values = [subset["qty"].get(d, 0) for d in DOW_ORDER]
-                fig.add_bar(
-                    x=DOW_ORDER,
-                    y=qty_values,
-                    name=product_name,
-                    customdata=[product_name] * len(DOW_ORDER),
-                    marker_color=BRANCH_PALETTE[i % len(BRANCH_PALETTE)],
-                    hovertemplate="<b>%{customdata}</b><br>Day: %{x}<br>Units: <b>%{y:,.0f}</b><extra></extra>",
-                )
+                fig.add_bar(x=DOW_ORDER, y=[subset["qty"].get(d, 0) for d in DOW_ORDER], name=product_name, marker_color=BRANCH_PALETTE[i % len(BRANCH_PALETTE)])
         st.plotly_chart(style_plot(fig), use_container_width=True)
     with c2:
         st.subheader("Weather Impact")
@@ -1482,20 +1384,8 @@ def render_model() -> None:
         st.subheader("MAE by SKU volume bucket")
         mb = mae_by_bucket()
         fig = go.Figure()
-        fig.add_bar(
-            x=mb["bucket"],
-            y=mb["prophet"],
-            name="Prophet",
-            marker_color="#f0a04b",
-            hovertemplate="<b>Prophet</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
-        )
-        fig.add_bar(
-            x=mb["bucket"],
-            y=mb["naive"],
-            name="Naive",
-            marker_color="rgba(255,255,255,0.25)",
-            hovertemplate="<b>Naive</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
-        )
+        fig.add_bar(x=mb["bucket"], y=mb["prophet"], name="Prophet", marker_color="#f0a04b")
+        fig.add_bar(x=mb["bucket"], y=mb["naive"], name="Naive", marker_color="rgba(255,255,255,0.25)")
         st.plotly_chart(style_plot(fig), use_container_width=True)
     with c2:
         st.subheader("Residual distribution")
@@ -1642,8 +1532,6 @@ def main() -> None:
     page = st.session_state.selected_page
     if page == "Bake Plan":
         render_bake_plan(user)
-    elif page == "Product":
-        render_product(user)
     elif page == "Analytics":
         render_analytics()
     elif page == "Model":
