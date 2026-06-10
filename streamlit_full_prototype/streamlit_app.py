@@ -5,11 +5,14 @@ The original project files are intentionally left untouched.
 """
 from __future__ import annotations
 
+import base64
 import sqlite3
 import subprocess
 import sys
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from functools import lru_cache
+from html import escape
 from pathlib import Path
 from typing import Iterable
 
@@ -23,6 +26,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / "panem.db"
 CSV_DIR = ROOT / "CompleteData"
+NAV_LOGO_PATH = ROOT / "static" / "assets" / "panem_logo_nav_compact.png"
 TZ = pytz.timezone("America/Monterrey")
 
 BRANCHES = [
@@ -219,7 +223,7 @@ def apply_css() -> None:
         }
         .block-container {
           max-width: 1440px;
-          padding-top: 1.1rem;
+          padding-top: calc(80px + 1.1rem);
           padding-bottom: 3rem;
         }
 
@@ -238,7 +242,7 @@ def apply_css() -> None:
 
         .panem-navbar {
           position: sticky;
-          top: 0;
+          top: 80px;
           z-index: 999;
           display:flex;
           align-items:center;
@@ -251,6 +255,55 @@ def apply_css() -> None:
           background:linear-gradient(135deg, rgba(18,11,5,.94), rgba(7,4,1,.90));
           box-shadow:0 18px 44px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.14);
           backdrop-filter: blur(14px);
+        }
+        .panem-inline-brand {
+          display:flex;
+          align-items:center;
+          justify-content:flex-start;
+          width:124px;
+          height:52px;
+          margin:0;
+        }
+        .panem-logo-img {
+          display:block;
+          width:118px;
+          max-height:52px;
+          height:auto;
+          object-fit:contain;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.panem-inline-brand) {
+          position:relative;
+          z-index:999;
+          align-items:center;
+          min-height:64px;
+          margin:-.35rem 0 .9rem 0;
+          padding:0 24px;
+          border:1px solid rgba(255,255,255,.14);
+          background:linear-gradient(135deg, rgba(18,11,5,.96), rgba(7,4,1,.93));
+          box-shadow:0 14px 34px rgba(0,0,0,.30), inset 0 -1px 0 rgba(255,255,255,.10);
+          backdrop-filter:blur(14px);
+        }
+        div[data-testid="stHorizontalBlock"]:has(.panem-inline-brand) > div {
+          align-self:center;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.panem-inline-brand) div[data-testid="stElementContainer"] {
+          margin:0 !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.panem-inline-brand) .stButton > button {
+          font-size:11px;
+          min-height:34px;
+          margin:0;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.panem-inline-brand) .panem-time {
+          font-size:12px;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.panem-inline-brand) .panem-time strong {
+          font-size:14px;
+        }
+        .panem-nav-title {
+          display:flex;
+          flex-direction:column;
+          gap:2px;
         }
         .panem-brand {
           display:flex;
@@ -283,6 +336,24 @@ def apply_css() -> None:
           font-size:12px;
           color:var(--muted);
         }
+        .panem-time {
+          color:var(--muted);
+          font-size:13px;
+          white-space:nowrap;
+        }
+        .panem-time strong {
+          color:var(--accent);
+          font-size:16px;
+          margin-left:6px;
+        }
+        .nav-date-inline {
+          display:flex;
+          align-items:center;
+          justify-content:flex-end;
+          height:34px;
+          margin:0;
+          padding-right:6px;
+        }
         .nav-pill, .modepill {
           display:inline-flex;
           align-items:center;
@@ -307,9 +378,17 @@ def apply_css() -> None:
           background:rgba(255,255,255,.05);
         }
         .nav-help {
-          margin:-.15rem 0 .35rem 0;
+          margin:.15rem 0 .35rem 0;
           color:var(--muted2);
           font-size:12px;
+        }
+        .nav-row-label {
+          color:var(--muted2);
+          font-size:10px;
+          letter-spacing:1.2px;
+          text-transform:uppercase;
+          font-weight:800;
+          margin:0 0 5px 2px;
         }
 
         .control-strip {
@@ -328,6 +407,92 @@ def apply_css() -> None:
           font-weight:800;
           margin-bottom:8px;
         }
+        .bake-controls-anchor { display:none; }
+        div[data-testid="stHorizontalBlock"]:has(.bake-controls-anchor) {
+          align-items:flex-end;
+          margin:.15rem 0 .9rem 0;
+          padding:0;
+          border:0;
+          background:transparent;
+          box-shadow:none;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.bake-controls-anchor) > div {
+          align-self:flex-end;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.bake-controls-anchor) div[data-testid="stElementContainer"] {
+          margin:0 !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.bake-controls-anchor) label p {
+          color:var(--muted2);
+          font-size:10px;
+          letter-spacing:1.15px;
+          text-transform:uppercase;
+          font-weight:850;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.bake-controls-anchor) .stButton > button {
+          min-height:40px;
+          font-size:14px;
+          white-space:nowrap;
+        }
+        .bake-mode-control {
+          min-height:40px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        }
+        .model-summary {
+          margin:.65rem 0 1.2rem 0;
+          padding:22px 24px;
+          border:1px solid rgba(255,255,255,.24);
+          border-radius:18px;
+          background:linear-gradient(135deg, rgba(255,247,235,.12), rgba(255,247,235,.065));
+          box-shadow:0 16px 46px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.14);
+        }
+        .model-summary-title {
+          color:var(--accent);
+          font-size:14px;
+          text-transform:uppercase;
+          letter-spacing:1.7px;
+          font-weight:900;
+          margin-bottom:16px;
+        }
+        .model-summary-grid {
+          display:grid;
+          grid-template-columns:repeat(3, minmax(0, 1fr));
+          gap:26px 42px;
+        }
+        .model-summary-item .label {
+          color:var(--muted2);
+          font-size:11px;
+          letter-spacing:1.35px;
+          text-transform:uppercase;
+          font-weight:900;
+          margin-bottom:8px;
+        }
+        .model-summary-item .value {
+          color:#fff;
+          font-size:14px;
+          line-height:1.55;
+          font-weight:650;
+        }
+        .model-features {
+          display:flex;
+          flex-wrap:wrap;
+          gap:8px;
+          margin-top:12px;
+          padding-top:16px;
+          border-top:1px solid rgba(255,255,255,.12);
+        }
+        .feature-chip {
+          display:inline-flex;
+          align-items:center;
+          padding:5px 9px;
+          border-radius:7px;
+          color:rgba(247,244,238,.82);
+          background:rgba(255,255,255,.10);
+          font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size:13px;
+        }
 
         div[data-testid="stMetric"], .glass-card {
           background: var(--panel);
@@ -339,6 +504,64 @@ def apply_css() -> None:
         div[data-testid="stMetricValue"] { color:#fff; }
         div[data-testid="stMetricLabel"] { color:var(--muted); }
         .small-muted { color:var(--muted); font-size:12px; }
+        .bake-table-head, .bake-table-row {
+          display:grid;
+          grid-template-columns:minmax(190px, 1.45fr) .55fr .65fr .68fr .78fr .44fr;
+          gap:12px;
+          align-items:center;
+        }
+        .bake-table-head {
+          padding:0 4px 8px 4px;
+          color:var(--muted2);
+          font-size:11px;
+          font-weight:900;
+          letter-spacing:1.15px;
+          text-transform:uppercase;
+        }
+        .bake-table-row {
+          padding:13px 4px;
+          border-top:1px solid rgba(255,255,255,.09);
+        }
+        .bake-item-name {
+          color:#fff;
+          font-weight:850;
+          line-height:1.25;
+        }
+        .bake-cell {
+          color:#fff;
+          font-weight:750;
+          text-align:right;
+          white-space:nowrap;
+        }
+        .bake-action-cell {
+          display:flex;
+          justify-content:flex-end;
+          align-items:center;
+        }
+        .primary-plan-value {
+          display:inline-flex;
+          align-items:center;
+          justify-content:flex-end;
+          min-width:64px;
+          padding:5px 10px;
+          border-radius:12px;
+          color:#fff;
+          background:rgba(240,160,75,.18);
+          border:1px solid rgba(240,160,75,.35);
+          font-size:1.16rem;
+          font-weight:950;
+          box-shadow:0 8px 18px rgba(240,160,75,.10);
+        }
+        @media (max-width: 900px) {
+          .model-summary-grid { grid-template-columns:1fr; gap:18px; }
+          .bake-table-head { display:none; }
+          .bake-table-row {
+            grid-template-columns:1fr 1fr;
+            gap:10px 14px;
+          }
+          .bake-item-name, .bake-action-cell { grid-column:1 / -1; }
+          .bake-cell { text-align:left; }
+        }
 
         .stDataFrame, div[data-testid="stDataFrame"] {
           border: 1px solid rgba(255,255,255,.12);
@@ -456,6 +679,8 @@ def get_forecast(branch: str, bake_date: date) -> dict:
                     "hi": round(float(f["confidence_high"]), 0),
                     "forecast_id": int(f["id"]),
                     "override": round(float(ov_row["override_units"]), 0) if ov_row else None,
+                    "override_reason": ov_row["reason"] if ov_row else None,
+                    "override_note": ov_row["note"] if ov_row else None,
                 })
             out.append({
                 "id": int(grp.iloc[0]["id"]),
@@ -482,7 +707,7 @@ def get_forecast(branch: str, bake_date: date) -> dict:
     if not rows.empty:
         for _, r in rows.iterrows():
             units = r["override"] if pd.notna(r["override"]) else r["next7_pred"]
-            avg_price = scalar("select avg(unit_price) from sales_history where branch = ? and sku = ?", (branch, r["sku"])) or 0
+            avg_price = avg_unit_price(branch, r["sku"])
             projected_revenue += float(units) * float(avg_price)
             expected_waste += max(0, float(r["next7_pred"]) - float(r["next7_lo"]))
             stockout_risk += int((r["last_week_total"] or 0) > r["next7_lo"])
@@ -521,9 +746,85 @@ def branches_summary(bake_date: date) -> pd.DataFrame:
     )
 
 
-def forecast_vs_actual(branch: str, days: int = 7) -> pd.DataFrame:
-    end = today()
-    start = end - timedelta(days=days - 1)
+def branches_summary_range(start_date: date, end_date: date) -> pd.DataFrame:
+    return read_sql(
+        """
+        select branch, round(sum(predicted_units), 0) as units
+        from forecast
+        where bake_date >= ? and bake_date <= ?
+        group by branch
+        """,
+        (start_date.isoformat(), end_date.isoformat()),
+    )
+
+
+def normalize_branch_name(value: str) -> str:
+    branch = str(value).strip().replace("Panem - ", "")
+    if branch == "Carreta":
+        return "La Carreta"
+    return branch
+
+
+@lru_cache(maxsize=1)
+def csv_price_lookup() -> dict:
+    frames = []
+    for f in CSV_DIR.glob("*.csv"):
+        try:
+            df = pd.read_csv(
+                f,
+                usecols=lambda c: c.strip() in {"sucursal", "item", "unit_price"},
+                low_memory=False,
+            )
+        except Exception:
+            continue
+        df.columns = [c.strip() for c in df.columns]
+        if not {"item", "unit_price"}.issubset(df.columns):
+            continue
+        df["sku"] = df["item"].astype(str).str.strip().str.upper()
+        df["unit_price"] = pd.to_numeric(df["unit_price"], errors="coerce")
+        df = df[df["unit_price"] > 0].copy()
+        if "sucursal" in df.columns:
+            df["branch"] = df["sucursal"].map(normalize_branch_name)
+        else:
+            df["branch"] = ""
+        frames.append(df[["branch", "sku", "unit_price"]])
+
+    if not frames:
+        return {"by_branch_sku": {}, "by_sku": {}}
+
+    prices = pd.concat(frames, ignore_index=True)
+    by_branch = prices.groupby(["branch", "sku"])["unit_price"].median().to_dict()
+    by_sku = prices.groupby("sku")["unit_price"].median().to_dict()
+    return {
+        "by_branch_sku": {(str(k[0]), str(k[1])): float(v) for k, v in by_branch.items()},
+        "by_sku": {str(k): float(v) for k, v in by_sku.items()},
+    }
+
+
+def avg_unit_price(branch: str, sku: str) -> float:
+    db_price = scalar(
+        """
+        select avg(unit_price)
+        from sales_history
+        where branch = ? and sku = ? and unit_price > 0
+        """,
+        (branch, sku),
+    )
+    if db_price and float(db_price) > 0:
+        return float(db_price)
+
+    lookup = csv_price_lookup()
+    sku_key = str(sku).strip().upper()
+    return float(
+        lookup["by_branch_sku"].get((branch, sku_key))
+        or lookup["by_sku"].get(sku_key)
+        or 0
+    )
+
+
+def forecast_vs_actual(branch: str, start_date: date | None = None, days: int = 7) -> pd.DataFrame:
+    start = start_date or today()
+    end = start + timedelta(days=days - 1)
     f = read_sql(
         """
         select bake_date as d, sum(predicted_units) as predicted
@@ -543,6 +844,131 @@ def forecast_vs_actual(branch: str, days: int = 7) -> pd.DataFrame:
     frame = pd.DataFrame({"d": [d.isoformat() for d in date_range(start, end)]})
     frame = frame.merge(f, how="left", on="d").merge(a, how="left", on="d").fillna(0)
     return frame
+
+
+def has_value(value) -> bool:
+    if value is None:
+        return False
+    try:
+        missing = pd.isna(value)
+        if isinstance(missing, (bool, np.bool_)):
+            return not bool(missing)
+    except (TypeError, ValueError):
+        pass
+    return True
+
+
+def as_iso_date(value) -> str:
+    return pd.to_datetime(value).date().isoformat()
+
+
+def daily_reference_sales(branch: str, bake_date: date) -> dict[str, float]:
+    previous_week = bake_date - timedelta(days=7)
+    df = read_sql(
+        """
+        select sku, round(sum(qty_sold), 0) as units
+        from sales_history
+        where branch = ? and sale_date = ?
+        group by sku
+        """,
+        (branch, previous_week.isoformat()),
+    )
+    if df.empty:
+        return {}
+    return {str(r["sku"]): float(r["units"] or 0) for _, r in df.iterrows()}
+
+
+def plan_rows_for_view(rows: pd.DataFrame, branch: str, bake_date: date, view_mode: str) -> tuple[pd.DataFrame, date]:
+    if rows.empty:
+        return rows.copy(), bake_date
+
+    if view_mode == "Weekly":
+        display = rows.copy()
+        display["view_id"] = display["id"]
+        display["view_pred"] = display["next7_pred"]
+        display["view_lo"] = display["next7_lo"]
+        display["view_hi"] = display["next7_hi"]
+        display["view_override"] = display["override"]
+        display["view_override_reason"] = display["override_reason"]
+        display["comparison_units"] = display["last_week_total"]
+        display["view_date"] = bake_date.isoformat()
+        return display.sort_values("view_pred", ascending=False), bake_date
+
+    def build_daily_records(target_date: date) -> list[dict]:
+        target_iso = target_date.isoformat()
+        records = []
+        for _, row in rows.iterrows():
+            daily = row.get("daily") or []
+            day = next((d for d in daily if as_iso_date(d.get("date")) == target_iso), None)
+            if not day:
+                continue
+            rec = row.to_dict()
+            rec.update({
+                "view_id": int(day.get("forecast_id", row["id"])),
+                "view_pred": float(day.get("pred", 0) or 0),
+                "view_lo": float(day.get("lo", 0) or 0),
+                "view_hi": float(day.get("hi", 0) or 0),
+                "view_override": day.get("override"),
+                "view_override_reason": day.get("override_reason"),
+                "view_date": target_iso,
+            })
+            records.append(rec)
+        return records
+
+    effective_date = bake_date
+    daily_records = build_daily_records(effective_date)
+    if not daily_records:
+        effective_date = pd.to_datetime(rows.iloc[0]["week_start"]).date()
+        daily_records = build_daily_records(effective_date)
+
+    display = pd.DataFrame(daily_records)
+    if display.empty:
+        return display, effective_date
+
+    reference_map = daily_reference_sales(branch, effective_date)
+
+    def comparison_units(row) -> float | None:
+        exact = reference_map.get(str(row["sku"]))
+        if exact is not None:
+            return exact
+        if has_value(row.get("last_week_total")):
+            return round(float(row["last_week_total"]) / 7, 0)
+        return None
+
+    display["comparison_units"] = display.apply(comparison_units, axis=1)
+    return display.sort_values("view_pred", ascending=False), effective_date
+
+
+def plan_kpis_for_rows(display: pd.DataFrame, branch: str, waste_rate) -> dict:
+    if display.empty:
+        return {
+            "units_to_bake": 0,
+            "projected_revenue": 0,
+            "expected_waste": 0,
+            "stockout_risk_skus": 0,
+            "waste_rate": waste_rate,
+        }
+
+    total_units = 0.0
+    projected_revenue = 0.0
+    expected_waste = 0.0
+    stockout_risk = 0
+
+    for _, r in display.iterrows():
+        units = float(r["view_override"]) if has_value(r.get("view_override")) else float(r["view_pred"])
+        avg_price = avg_unit_price(branch, r["sku"])
+        total_units += units
+        projected_revenue += units * float(avg_price)
+        expected_waste += max(0, float(r["view_pred"]) - float(r["view_lo"]))
+        stockout_risk += int(has_value(r.get("comparison_units")) and float(r["comparison_units"]) > float(r["view_lo"]))
+
+    return {
+        "units_to_bake": round(total_units),
+        "projected_revenue": round(projected_revenue, 2),
+        "expected_waste": round(expected_waste),
+        "stockout_risk_skus": stockout_risk,
+        "waste_rate": waste_rate,
+    }
 
 
 def upsert_override(forecast_id: int, units: float, reason: str, note: str, user_id: int) -> None:
@@ -613,6 +1039,14 @@ def allowed_pages_for_role(role: str) -> list[str]:
     return ["Bake Plan", "Product", "Analytics"]
 
 
+@lru_cache(maxsize=1)
+def nav_logo_data_uri() -> str:
+    if not NAV_LOGO_PATH.exists():
+        return ""
+    encoded = base64.b64encode(NAV_LOGO_PATH.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
 def init_session_state() -> None:
     """Initialize UI state without touching business/data logic."""
     st.session_state.setdefault("selected_role", "operator")
@@ -658,42 +1092,39 @@ def set_role(role: str) -> None:
 
 def render_top_navbar(user: dict) -> None:
     """Top dashboard shell replacing sidebar navigation."""
-    role_label = st.session_state.selected_role.title()
     active_page = st.session_state.selected_page
     allowed_pages = allowed_pages_for_role(st.session_state.selected_role)
-
-    st.markdown(
-        f"""
-        <div class="panem-navbar">
-          <div class="panem-brand"><span class="panem-mark">P</span><span>PANEM</span></div>
-          <div class="panem-nav-status">
-            <span class="nav-pill">{active_page}</span>
-            <span class="nav-pill neutral">{user['username']} · {role_label}</span>
-            <span class="nav-pill neutral">{now():%a, %b %d · %H:%M}</span>
-            <span class="nav-pill logout">Logout</span>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    visible_pages = [p for p in ["Bake Plan", "Analytics", "Model", "Feedback"] if p in allowed_pages]
+    nav_cols = st.columns([1.1, *([0.92] * len(visible_pages)), 3.1, 0.88, 0.88])
+    logo_src = nav_logo_data_uri()
+    brand_markup = (
+        f"<div class='panem-inline-brand'><img class='panem-logo-img' src='{logo_src}' alt='Panem Bakery & Bistro logo'></div>"
+        if logo_src
+        else "<div class='panem-inline-brand'>PANEM</div>"
     )
 
-    st.markdown("<div class='nav-help'>Role and page navigation</div>", unsafe_allow_html=True)
-    role_cols = st.columns([0.9, 0.9, 0.25, 1, 1, 1, 1, 1.8])
-    with role_cols[0]:
+    with nav_cols[0]:
+        st.markdown(brand_markup, unsafe_allow_html=True)
+
+    for i, page_name in enumerate(visible_pages, start=1):
+        with nav_cols[i]:
+            if st.button(page_name, type="primary" if active_page == page_name else "secondary", key=f"nav_page_{page_name}"):
+                st.session_state.selected_page = page_name
+                st.rerun()
+
+    with nav_cols[len(visible_pages) + 1]:
+        st.markdown(
+            f"<div class='nav-date-inline'><span class='panem-time'>{now():%a, %b %d}<strong>{now():%H:%M}</strong></span></div>",
+            unsafe_allow_html=True,
+        )
+    with nav_cols[len(visible_pages) + 2]:
         if st.button("Operator", type="primary" if st.session_state.selected_role == "operator" else "secondary", key="nav_role_operator"):
             set_role("operator")
             st.rerun()
-    with role_cols[1]:
+    with nav_cols[len(visible_pages) + 3]:
         if st.button("Analyst", type="primary" if st.session_state.selected_role == "analyst" else "secondary", key="nav_role_analyst"):
             set_role("analyst")
             st.rerun()
-
-    for i, page_name in enumerate(["Bake Plan", "Analytics", "Model", "Feedback"], start=3):
-        with role_cols[i]:
-            disabled = page_name not in allowed_pages
-            if st.button(page_name, type="primary" if active_page == page_name else "secondary", disabled=disabled, key=f"nav_page_{page_name}"):
-                st.session_state.selected_page = page_name
-                st.rerun()
 
 
 def dataframe_selected_rows(event) -> list[int]:
@@ -724,40 +1155,44 @@ def open_product_detail(branch: str, sku: str) -> None:
 def render_bake_plan(user: dict) -> None:
     # Original page: templates/plan.html. Original JS/API: static/js/plan.js + /api/forecast.
     # UI-only refactor: controls/actions moved to top; business logic is preserved.
-    st.title("Weekly bake plan")
-    st.caption("Operator workflow for weekly production recommendations.")
-
     st.markdown("<div class='control-strip-title'>Bake plan controls</div>", unsafe_allow_html=True)
-    c1, c2, c3, c4, c5, c6, c7 = st.columns([1.35, 1.15, 1.35, .9, 1.0, 1.18, 1.55])
+    c1, c2, c3, spacer, c4, c5, c6, c7 = st.columns([1.35, 1.18, 1.15, 1.65, .72, 1.05, 1.45, 2.0])
     with c1:
+        st.markdown("<span class='bake-controls-anchor'></span>", unsafe_allow_html=True)
         branch = st.selectbox("Branch", BRANCHES, index=0, key="bake_branch")
     with c2:
         selected_date = st.date_input("Bake date", default_bake_date(), key="bake_date")
     with c3:
-        min_conf = st.slider("Min confidence", 0, 100, 0, help="Lower bound confidence threshold (%)", key="bake_min_conf")
+        view_mode = st.radio("View", ["Weekly", "Daily"], horizontal=True, key="bake_view_mode")
 
     data = get_forecast(branch, selected_date)
     rows = data["rows"]
+    display_rows, effective_date = plan_rows_for_view(rows, branch, selected_date, view_mode)
+    view_kpis = plan_kpis_for_rows(display_rows, branch, data["kpis"]["waste_rate"])
 
     with c4:
-        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
-        st.markdown(f"<span class='modepill'>{data['mode']}</span>", unsafe_allow_html=True)
+        st.markdown(f"<div class='bake-mode-control'><span class='modepill'>{data['mode']}</span></div>", unsafe_allow_html=True)
     with c5:
-        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
         if st.button("Log Actuals", key="top_log_actuals"):
             st.session_state.show_actuals_editor = not st.session_state.get("show_actuals_editor", False)
     with c6:
-        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
         if st.button("Generate forecast", help="Runs the same batch.forecast module used by the FastAPI app.", key="top_generate_forecast"):
             run_forecast_generation()
     with c7:
-        st.markdown("<div style='height:1.72rem'></div>", unsafe_allow_html=True)
         if st.button("Lock plan & send to oven", disabled=data["mode"] != "plan" or data["is_locked"], key="top_lock_plan"):
             lock_plan(branch, selected_date, user["id"])
             st.success("Plan locked.")
             st.rerun()
 
-    st.caption(f"{branch} · {fmt_date(data['week_start'])} - {fmt_date(data['week_end'])}")
+    st.title("Bake plan")
+    st.caption("Operator workflow for daily and weekly production recommendations.")
+
+    if view_mode == "Daily":
+        st.caption(f"{branch} - {fmt_date(effective_date)} - daily view")
+        if effective_date != selected_date:
+            st.info(f"No forecast rows were found for {selected_date.isoformat()}; showing closest available day: {effective_date.isoformat()}.")
+    else:
+        st.caption(f"{branch} - {fmt_date(data['week_start'])} - {fmt_date(data['week_end'])} - weekly view")
 
     if data["is_locked"]:
         st.success("Plan locked. Bake order has been sent to the oven.")
@@ -767,51 +1202,48 @@ def render_bake_plan(user: dict) -> None:
         st.info("End-of-day actuals are open. Record what really sold to feed the next retrain.")
 
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Units to bake", fmt_int(data["kpis"]["units_to_bake"]), help="Across top-5 SKUs")
-    k2.metric("Projected revenue", fmt_money(data["kpis"]["projected_revenue"]), help="At avg historical price")
-    k3.metric("Expected waste", fmt_int(data["kpis"]["expected_waste"]), help="Units above lower CI")
-    k4.metric("Stock-out risk SKUs", fmt_int(data["kpis"]["stockout_risk_skus"]), help="Last week > lower CI")
-    k5.metric("Recorded waste rate", "-" if data["kpis"]["waste_rate"] is None else f"{data['kpis']['waste_rate'] * 100:.1f}%")
+    kpi_scope = "selected day" if view_mode == "Daily" else "7-day window"
+    k1.metric("Units to bake", fmt_int(view_kpis["units_to_bake"]), help=f"Across SKUs in the {kpi_scope}")
+    k2.metric("Projected revenue", fmt_money(view_kpis["projected_revenue"]), help="At avg historical price")
+    k3.metric("Expected waste", fmt_int(view_kpis["expected_waste"]), help="Units above lower CI")
+    k4.metric("Stock-out risk SKUs", fmt_int(view_kpis["stockout_risk_skus"]), help="Reference demand > lower CI")
+    k5.metric("Recorded waste rate", "-" if view_kpis["waste_rate"] is None else f"{view_kpis['waste_rate'] * 100:.1f}%")
 
-    left, right = st.columns(2)
+    left, right = st.columns([1.55, .85])
     with left:
-        st.subheader("Recommended bake")
-        if rows.empty:
+        st.subheader("Recommended Bake Weekly" if view_mode == "Weekly" else "Recommended Bake Daily")
+        if display_rows.empty:
             st.warning("No forecasts for this branch/date. Run forecast generation from the top controls.")
         else:
-            display = rows.copy()
-            display["certainty_pct"] = display.apply(
-                lambda r: max(0, 100 * (1 - max(0, r["next7_pred"] - r["next7_lo"]) / (r["next7_pred"] or 1))),
-                axis=1,
-            )
-            display = display[display["certainty_pct"] >= min_conf].copy()
-            display["recommended"] = display.apply(lambda r: r["override"] if pd.notna(r["override"]) else r["next7_pred"], axis=1)
-            display["CI 80%"] = display.apply(lambda r: f"{fmt_int(r['next7_lo'])}-{fmt_int(r['next7_hi'])}", axis=1)
-            display["stockout_risk"] = display.apply(lambda r: bool((r["last_week_total"] or 0) > r["next7_lo"]), axis=1)
+            display = display_rows.copy()
+            display["recommended"] = display.apply(lambda r: r["view_override"] if has_value(r["view_override"]) else r["view_pred"], axis=1)
+            display["CI 80%"] = display.apply(lambda r: f"{fmt_int(r['view_lo'])}-{fmt_int(r['view_hi'])}", axis=1)
+            display["stockout_risk"] = display.apply(lambda r: bool(has_value(r["comparison_units"]) and float(r["comparison_units"]) > float(r["view_lo"])), axis=1)
             reason_options = ["weather", "local_event", "promo", "gut_feel", "other"]
             popover = st.popover if hasattr(st, "popover") else st.expander
 
-            h1, h2, h3, h4, h5 = st.columns([1.45, .58, .7, .7, .84])
-            h1.caption("SKU / ITEM")
-            h2.caption("LAST 7D")
-            h3.caption("NEXT 7D")
+            h1, h2, h3, h4, h5, h6, h7 = st.columns([1.7, .58, .68, .7, .7, .55, .55])
+            h1.caption("ITEM")
+            h2.caption("LAST 7D" if view_mode == "Weekly" else "LAST WK")
+            h3.caption("NEXT 7D" if view_mode == "Weekly" else "DAY FCST")
             h4.caption("CI 80%")
             h5.caption("OVERRIDE")
+            h6.caption("NOTE")
+            h7.caption("WHY")
 
             for row_number, (_, r) in enumerate(display.iterrows()):
-                row_key = f"{branch}_{selected_date}_{r['id']}_{row_number}"
-                c1, c2, c3, c4, c5 = st.columns([1.45, .58, .7, .7, .84])
+                row_key = f"{branch}_{view_mode}_{effective_date}_{r['view_id']}_{row_number}"
+                c1, c2, c3, c4, c5, c6, c7 = st.columns([1.7, .58, .68, .7, .7, .55, .55])
                 with c1:
-                    st.markdown(f"**{r['sku']}**")
-                    st.caption(str(r["item_name"]))
-                c2.markdown(f"**{fmt_int(r['last_week_total'])}**")
-                c3.markdown(f"**{fmt_int(r['next7_pred'])}**")
+                    st.markdown(f"**{r['item_name']}**")
+                c2.markdown(f"**{fmt_int(r['comparison_units'])}**")
+                c3.markdown(f"<span class='primary-plan-value'>{fmt_int(r['view_pred'])}</span>", unsafe_allow_html=True)
                 c4.markdown(f"**{r['CI 80%']}**")
 
                 override_key = f"plan_override_units_{row_key}"
                 with c5:
                     st.number_input(
-                        f"Override units for {r['sku']}",
+                        f"Override units for {r['item_name']}",
                         min_value=0.0,
                         value=float(r["recommended"]),
                         step=1.0,
@@ -820,41 +1252,44 @@ def render_bake_plan(user: dict) -> None:
                         key=override_key,
                     )
 
-                with popover("Override production"):
-                    st.markdown("#### Override production")
-                    st.caption("SKU")
-                    st.write(f"{r['sku']} - {r['item_name']}")
-                    units = float(st.session_state.get(override_key, r["recommended"]))
-                    st.caption("Override units")
-                    st.write(fmt_int(units))
-                    reason_value = r["override_reason"] if pd.notna(r["override_reason"]) else "gut_feel"
-                    reason_index = reason_options.index(reason_value) if reason_value in reason_options else 3
-                    reason = st.selectbox("Reason", reason_options, index=reason_index, key=f"plan_override_reason_{row_key}")
-                    note = st.text_area("Note (optional)", height=80, key=f"plan_override_note_{row_key}")
-                    if st.button("Save override", disabled=data["mode"] != "plan", key=f"save_override_{row_key}"):
-                        upsert_override(int(r["id"]), units, reason, note, user["id"])
-                        st.success("Override saved.")
-                        st.rerun()
-                    if st.button("Delete override", disabled=data["mode"] != "plan", key=f"delete_override_{row_key}"):
-                        delete_override(int(r["id"]))
-                        st.info("Override deleted.")
-                        st.rerun()
-
-                if st.button("🔍", help="Open product detail", key=f"open_product_detail_{row_key}"):
-                    open_product_detail(branch, str(r["sku"]))
+                with c6:
+                    with popover("📝"):
+                        st.markdown("#### Override production")
+                        st.caption("Item")
+                        st.write(str(r["item_name"]))
+                        units = float(st.session_state.get(override_key, r["recommended"]))
+                        st.caption("Override units")
+                        st.write(fmt_int(units))
+                        reason_value = r["view_override_reason"] if has_value(r["view_override_reason"]) else "gut_feel"
+                        reason_index = reason_options.index(reason_value) if reason_value in reason_options else 3
+                        reason = st.selectbox("Reason", reason_options, index=reason_index, key=f"plan_override_reason_{row_key}")
+                        note = st.text_area("Note (optional)", height=80, key=f"plan_override_note_{row_key}")
+                        if st.button("Save override", disabled=data["mode"] != "plan", key=f"save_override_{row_key}"):
+                            upsert_override(int(r["view_id"]), units, reason, note, user["id"])
+                            st.success("Override saved.")
+                            st.rerun()
+                        if st.button("Delete override", disabled=data["mode"] != "plan", key=f"delete_override_{row_key}"):
+                            delete_override(int(r["view_id"]))
+                            st.info("Override deleted.")
+                            st.rerun()
+                with c7:
+                    if st.button("🔍", help="Open product detail", key=f"open_product_detail_{row_key}"):
+                        open_product_detail(branch, str(r["sku"]))
 
                 if row_number < len(display) - 1:
                     st.divider()
 
     with right:
-        
-        st.subheader("Units by branch")
-        summary = branches_summary(data["week_start"])
+        st.subheader(f"Units by branch - {view_mode.lower()}")
+        if view_mode == "Daily":
+            summary = branches_summary_range(effective_date, effective_date)
+        else:
+            summary = branches_summary_range(data["week_start"], data["week_end"])
         if not summary.empty:
             st.plotly_chart(bar_fig(summary["branch"], summary["units"], horizontal=True), use_container_width=True)
 
         st.subheader("Forecast vs actual · 7 days")
-        fva = forecast_vs_actual(branch)
+        fva = forecast_vs_actual(branch, data["week_start"])
         st.plotly_chart(
             line_fig(fva["d"], [
                 {"name": "Predicted", "data": fva["predicted"], "color": "#f0a04b"},
@@ -862,11 +1297,15 @@ def render_bake_plan(user: dict) -> None:
             ], 300),
             use_container_width=True,
         )
+        if float(fva["actual"].sum()) == 0:
+            st.caption("Actuals will appear here after logging daily sales for this bake window.")
 
     if st.session_state.get("show_actuals_editor", False):
         st.subheader("Log daily actuals")
         if not rows.empty:
-            actual_day = st.selectbox("Day", date_range(data["week_start"], data["week_end"]), format_func=lambda d: f"{d:%a %Y-%m-%d}")
+            actual_days = date_range(data["week_start"], data["week_end"])
+            actual_index = actual_days.index(effective_date) if effective_date in actual_days else 0
+            actual_day = st.selectbox("Day", actual_days, index=actual_index, format_func=lambda d: f"{d:%a %Y-%m-%d}")
             actual_existing = read_sql(
                 "select sku, qty_sold, qty_wasted from actual where branch = ? and bake_date = ?",
                 (branch, actual_day.isoformat()),
@@ -989,7 +1428,7 @@ def get_product_deep_dive(sku: str, branch: str) -> dict | None:
             name_map = other.drop_duplicates("sku").set_index("sku")["item_name"].to_dict()
             similar = pd.DataFrame([{"sku": s, "item_name": name_map.get(s, ""), "Pearson r": round(float(v), 3)} for s, v in corrs.items()])
 
-    avg_price = scalar("select avg(unit_price) from sales_history where branch = ? and sku = ?", (branch, sku)) or 0
+    avg_price = avg_unit_price(branch, sku)
     active = read_sql("select * from modelrun where algorithm = 'prophet' and is_active = 1 order by id desc limit 1")
     rec = {
         "predicted_units": round(float(fc_window["predicted_units"].sum()), 1) if not fc_window.empty else None,
@@ -1249,14 +1688,27 @@ def holiday_impact(branch: str) -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def branch_csv_df() -> pd.DataFrame:
-    frames = [pd.read_csv(f, parse_dates=["operating_date"]) for f in CSV_DIR.glob("*.csv")]
+    frames = []
+    for f in CSV_DIR.glob("*.csv"):
+        try:
+            df = pd.read_csv(f, low_memory=False)
+        except Exception:
+            continue
+        df.columns = [c.strip() for c in df.columns]
+        frames.append(df)
+    if not frames:
+        return pd.DataFrame()
     df = pd.concat(frames, ignore_index=True)
+    df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce").fillna(0)
     df = df[df["quantity"] > 0].copy()
     dow_es = {"lunes": "Mon", "martes": "Tue", "miercoles": "Wed", "jueves": "Thu", "viernes": "Fri", "sabado": "Sat", "domingo": "Sun"}
-    df["branch"] = df["sucursal"].str.replace("Panem - ", "", regex=False)
+    df["operating_date"] = pd.to_datetime(df["operating_date"], errors="coerce")
+    df = df.dropna(subset=["operating_date"])
+    df["branch"] = df["sucursal"].map(normalize_branch_name)
+    df["item"] = df["item"].astype(str).str.strip()
     df["year"] = df["operating_date"].dt.year
     df["month"] = df["operating_date"].dt.month
-    df["dow"] = df["day_name"].str.lower().map(dow_es).fillna(df["day_name"])
+    df["dow"] = df["day_name"].astype(str).str.strip().str.lower().map(dow_es).fillna(df["day_name"].astype(str).str.strip())
     return df
 
 
@@ -1265,15 +1717,25 @@ def hourly_csv_df() -> pd.DataFrame:
     frames = []
     for f in CSV_DIR.glob("*.csv"):
         try:
-            frames.append(pd.read_csv(f, usecols=["sucursal", "captured_time", "item", "quantity", "is_modifier"], low_memory=False))
+            df = pd.read_csv(f, low_memory=False)
         except Exception:
-            pass
+            continue
+        df.columns = [c.strip() for c in df.columns]
+        required = {"sucursal", "captured_time", "item", "quantity"}
+        if not required.issubset(df.columns):
+            continue
+        frames.append(df)
+    if not frames:
+        return pd.DataFrame()
     df = pd.concat(frames, ignore_index=True)
-    df = df[df["is_modifier"] != True].copy()
+    if "is_modifier" in df.columns:
+        df = df[df["is_modifier"] != True].copy()
+    df["quantity"] = pd.to_numeric(df["quantity"], errors="coerce").fillna(0)
     df = df[df["quantity"] > 0].copy()
     df["captured_time"] = pd.to_datetime(df["captured_time"], errors="coerce")
     df = df.dropna(subset=["captured_time"])
-    df["branch"] = df["sucursal"].str.replace("Panem - ", "", regex=False)
+    df["branch"] = df["sucursal"].map(normalize_branch_name)
+    df["item"] = df["item"].astype(str).str.strip()
     df["hour"] = df["captured_time"].dt.hour
     df["dow"] = df["captured_time"].dt.day_name().str[:3]
     df["month"] = df["captured_time"].dt.month
@@ -1290,12 +1752,18 @@ def demand_heatmap(view: str, branch: str, item: str, month: str) -> tuple[pd.Da
     if month != "all" and "month" in df:
         df = df[df["month"] == int(month)]
     if view == "monthly":
-        pivot = df.groupby(["month", "year"])["quantity"].sum().reset_index().pivot(index="month", columns="year", values="quantity").fillna(0)
-        pivot.index = [MONTH_LABELS[m - 1] for m in pivot.index]
+        if df.empty:
+            pivot = pd.DataFrame(0, index=MONTH_LABELS, columns=[])
+        else:
+            pivot = df.groupby(["month", "year"])["quantity"].sum().reset_index().pivot(index="month", columns="year", values="quantity").fillna(0)
+            pivot.index = [MONTH_LABELS[int(m) - 1] for m in pivot.index]
         caption = "Rows = months · Columns = years · Cell = total units sold"
     elif view == "weekly":
-        pivot = df.groupby(["dow", "month"])["quantity"].mean().reset_index().pivot(index="dow", columns="month", values="quantity").reindex(DOW_ORDER).fillna(0)
-        pivot.columns = [MONTH_LABELS[m - 1] for m in pivot.columns]
+        if df.empty:
+            pivot = pd.DataFrame(0, index=DOW_ORDER, columns=MONTH_LABELS)
+        else:
+            pivot = df.groupby(["dow", "month"])["quantity"].mean().reset_index().pivot(index="dow", columns="month", values="quantity").reindex(DOW_ORDER).fillna(0)
+            pivot.columns = [MONTH_LABELS[int(m) - 1] for m in pivot.columns]
         caption = "Rows = day of week · Columns = month · Cell = avg daily units"
     else:
         pivot = df.groupby(["hour", "dow"])["quantity"].sum().reset_index().pivot(index="hour", columns="dow", values="quantity").reindex(columns=DOW_ORDER).reindex(range(24)).fillna(0)
@@ -1305,13 +1773,19 @@ def demand_heatmap(view: str, branch: str, item: str, month: str) -> tuple[pd.Da
 
 
 def render_analytics() -> None:
-    st.title("Analytics")
-    st.caption("Historical sales insights & demand patterns across all branches.")
-    branch_label = st.selectbox("Sucursal", ["All branches", *BRANCHES], key="analytics_branch")
+    title_col, branch_col = st.columns([4.1, 1.35])
+    with title_col:
+        st.title("Analytics")
+        st.caption("Historical sales insights & demand patterns across all branches.")
+    with branch_col:
+        branch_label = st.selectbox("Sucursal", ["All branches", *BRANCHES], key="analytics_branch")
     branch = "all" if branch_label == "All branches" else branch_label
 
-    st.subheader("Sales Over Time")
-    granularity = st.selectbox("Granularity", ["month", "week"], format_func=str.title)
+    sales_title_col, granularity_col = st.columns([4.1, 1.35])
+    with sales_title_col:
+        st.subheader("Sales Over Time")
+    with granularity_col:
+        granularity = st.radio("Granularity", ["month", "week"], horizontal=True, format_func=str.title, key="analytics_granularity")
     labels, datasets = sales_over_time(branch, granularity)
     fig = go.Figure()
     for i, ds in enumerate(datasets):
@@ -1321,11 +1795,16 @@ def render_analytics() -> None:
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("Top Products")
-        top = top_products(branch, 10)
+        top_filter, _ = st.columns([1.1, 2.0])
+        with top_filter:
+            top_n = st.selectbox("Top N", [5, 10, 15, 20], index=1, key="analytics_top_n")
+        top = top_products(branch, int(top_n))
         st.plotly_chart(bar_fig(top["item_name"], top["total_qty"], horizontal=True), use_container_width=True)
     with c2:
         st.subheader("Monthly Seasonality")
-        product = st.selectbox("Product", ["All products", *top_products(branch, 50)["item_name"].tolist()])
+        product_filter, _ = st.columns([1.6, 1.5])
+        with product_filter:
+            product = st.selectbox("Product", ["All products", *top_products(branch, 50)["item_name"].tolist()])
         ms = monthly_seasonality(branch, None if product == "All products" else product)
         st.plotly_chart(bar_fig(ms["month"], ms["value"], color="#9bcf6b"), use_container_width=True)
 
@@ -1347,6 +1826,7 @@ def render_analytics() -> None:
                     hovertemplate="<b>%{customdata}</b><br>Day: %{x}<br>Units: <b>%{y:,.0f}</b><extra></extra>",
                 )
         st.plotly_chart(style_plot(fig), use_container_width=True)
+        st.caption("Avg daily units by weekday for the top products in the selected branch.")
     with c2:
         st.subheader("Weather Impact")
         wi = weather_impact(branch)
@@ -1359,16 +1839,15 @@ def render_analytics() -> None:
         st.caption("Avg daily units on regular days vs. quincena pay-days vs. public holidays.")
 
     st.subheader("Demand Heatmap")
-    h1, h2, h3, h4 = st.columns(4)
-    view = h1.radio("View", ["monthly", "weekly", "hourly"], horizontal=True, format_func=lambda v: {"monthly": "Monthly", "weekly": "Weekly", "hourly": "By Hour"}[v])
+    h1, h2, h3 = st.columns(3)
+    view = h1.radio("View", ["monthly", "weekly"], horizontal=True, format_func=lambda v: {"monthly": "Monthly", "weekly": "Weekly"}[v])
     hm_branch_label = h2.selectbox("Heatmap sucursal", ["All branches", *BRANCHES])
     hm_branch = "all" if hm_branch_label == "All branches" else hm_branch_label
     items_df = branch_csv_df()
     if hm_branch != "all":
         items_df = items_df[items_df["branch"] == hm_branch]
     hm_item = h3.selectbox("Product", ["all", *sorted(items_df["item"].dropna().unique().tolist())], format_func=lambda x: "All products" if x == "all" else x)
-    hm_month = h4.selectbox("Month", ["all", *[str(i) for i in range(1, 13)]], format_func=lambda x: "All months" if x == "all" else MONTH_LABELS[int(x) - 1])
-    pivot, caption = demand_heatmap(view, hm_branch, hm_item, hm_month if view == "hourly" else "all")
+    pivot, caption = demand_heatmap(view, hm_branch, hm_item, "all")
     st.caption(caption)
     heat = go.Figure(data=go.Heatmap(z=pivot.values, x=[str(c) for c in pivot.columns], y=pivot.index, colorscale=[[0, "#ffffff"], [0.25, "#fde8c8"], [0.50, "#f5b96e"], [0.75, "#f0a04b"], [1, "#c96a00"]], hovertemplate="<b>%{y}</b> · %{x}<br>Units: <b>%{z:,.0f}</b><extra></extra>"))
     heat.update_yaxes(autorange="reversed")
@@ -1455,24 +1934,41 @@ def mae_by_bucket() -> pd.DataFrame:
 
 
 def render_model() -> None:
-    st.title("Model card")
-    st.caption("Production demand model.")
     card = model_card()
     summary = card["summary"]
-    st.caption(f"version {summary['model_version'] or '-'}")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Algorithm", summary["algorithm"])
-    c2.metric("Last retrain", summary["last_retrain"] or "-")
-    c3.metric("Actuals used", f"{summary['trained_on_actuals_count']:,}")
-    st.markdown("**Training data**")
-    st.write(summary["training_data"])
-    st.markdown("**Validation**")
-    st.write(summary["validation"])
-    st.markdown("**Baseline**")
-    st.write(summary["baseline"])
-    st.markdown("**Features**")
-    st.write(" · ".join(f"`{f}`" for f in summary["features"]))
+    title_col, action_col = st.columns([4.4, 1])
+    with title_col:
+        st.title("Model card")
+        st.caption(f"Production demand model - version {summary['model_version'] or '-'}")
+    with action_col:
+        st.markdown("<div style='height:1.9rem'></div>", unsafe_allow_html=True)
+        if st.button("Retrain now", key="model_retrain_top"):
+            run_retrain()
+
+    features_html = "".join(f"<span class='feature-chip'>{escape(str(feature))}</span>" for feature in summary["features"])
+    summary_items = [
+        ("Algorithm", summary["algorithm"]),
+        ("Training data", summary["training_data"]),
+        ("Validation", summary["validation"]),
+        ("Baseline", summary["baseline"]),
+        ("Last retrain", summary["last_retrain"] or "-"),
+        ("Actuals used in last training", f"{summary['trained_on_actuals_count']:,}"),
+    ]
+    summary_grid = "".join(
+        f"<div class='model-summary-item'><div class='label'>{escape(label)}</div><div class='value'>{escape(str(value))}</div></div>"
+        for label, value in summary_items
+    )
+    st.markdown(
+        f"""
+        <div class="model-summary">
+          <div class="model-summary-title">Summary</div>
+          <div class="model-summary-grid">{summary_grid}</div>
+          <div class="model-features">{features_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.subheader("Headline metrics · most recent run per algorithm")
     st.dataframe(card["metrics"], use_container_width=True, hide_index=True)
@@ -1481,40 +1977,46 @@ def render_model() -> None:
     with c1:
         st.subheader("MAE by SKU volume bucket")
         mb = mae_by_bucket()
-        fig = go.Figure()
-        fig.add_bar(
-            x=mb["bucket"],
-            y=mb["prophet"],
-            name="Prophet",
-            marker_color="#f0a04b",
-            hovertemplate="<b>Prophet</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
-        )
-        fig.add_bar(
-            x=mb["bucket"],
-            y=mb["naive"],
-            name="Naive",
-            marker_color="rgba(255,255,255,0.25)",
-            hovertemplate="<b>Naive</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
-        )
-        st.plotly_chart(style_plot(fig), use_container_width=True)
+        if mb[["prophet", "naive"]].to_numpy().sum() == 0:
+            st.info("No actual-vs-forecast errors are available yet. Log actuals after a bake day to populate this chart.")
+        else:
+            fig = go.Figure()
+            fig.add_bar(
+                x=mb["bucket"],
+                y=mb["prophet"],
+                name="Prophet",
+                marker_color="#f0a04b",
+                hovertemplate="<b>Prophet</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
+            )
+            fig.add_bar(
+                x=mb["bucket"],
+                y=mb["naive"],
+                name="Naive",
+                marker_color="rgba(255,255,255,0.25)",
+                hovertemplate="<b>Naive</b><br>Bucket: %{x}<br>MAE: <b>%{y:.2f}</b><extra></extra>",
+            )
+            st.plotly_chart(style_plot(fig), use_container_width=True)
     with c2:
         st.subheader("Residual distribution")
         errs = forecast_errors_df()
-        fig = go.Figure()
         if not errs.empty:
+            fig = go.Figure()
             fig.add_histogram(x=errs["error"], nbinsx=25, marker_color="#f0a04b", name="Error")
             st.caption(f"n={len(errs)} · mean={errs['error'].mean():.2f} · sigma={errs['error'].std():.2f}")
+            st.plotly_chart(style_plot(fig), use_container_width=True)
         else:
-            st.caption("No actuals recorded yet - log end-of-day sales on the Bake Plan page to populate this.")
-        st.plotly_chart(style_plot(fig), use_container_width=True)
+            st.info("No actuals recorded yet. Log end-of-day sales on the Bake Plan page to populate this chart.")
 
     st.subheader("Forecast error over time · rolling 14-day MAE")
     if not errs.empty:
         daily = errs.assign(bake_date=pd.to_datetime(errs["bake_date"])).groupby("bake_date")["abs_error"].mean()
         rolling = daily.rolling(14, min_periods=3).mean().dropna()
-        fig = line_fig(rolling.index.strftime("%Y-%m-%d"), [{"name": "14-day rolling MAE", "data": rolling.values, "color": "#f0a04b", "fill": "tozeroy", "fillcolor": "rgba(240,160,75,0.18)"}], 420)
-        fig.add_hline(y=DRIFT_MAE_TOLERANCE, line_dash="dot", line_color="#ff6b5a", annotation_text="tolerance")
-        st.plotly_chart(fig, use_container_width=True)
+        if rolling.empty:
+            st.info("There are not enough recorded actuals yet for a 14-day rolling MAE.")
+        else:
+            fig = line_fig(rolling.index.strftime("%Y-%m-%d"), [{"name": "14-day rolling MAE", "data": rolling.values, "color": "#f0a04b", "fill": "tozeroy", "fillcolor": "rgba(240,160,75,0.18)"}], 420)
+            fig.add_hline(y=DRIFT_MAE_TOLERANCE, line_dash="dot", line_color="#ff6b5a", annotation_text="tolerance")
+            st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No forecast errors yet.")
     st.caption("The red dotted line marks 1.25x the training-MAE - sustained drift above it triggers a retraining recommendation.")
@@ -1528,10 +2030,6 @@ def render_model() -> None:
         runs["mape_pct"] = (runs["mape"] * 100).round(1)
         runs["acc20_pct"] = (runs["acc_20pct"] * 100).round(1)
         st.dataframe(runs[["model_version", "algorithm", "mae", "mape_pct", "acc20_pct", "trained_at", "is_active", "trained_on_actuals_count"]], use_container_width=True, hide_index=True)
-
-    if st.button("Retrain now"):
-        run_retrain()
-
 
 # Original page: templates/feedback_log.html + /api/feedback/log.
 def feedback_log(branch: str | None, days: int) -> pd.DataFrame:
