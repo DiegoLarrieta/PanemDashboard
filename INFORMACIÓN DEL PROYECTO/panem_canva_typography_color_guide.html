@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panem Canva Typography & Color Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --espresso:#130A04;
+  --mahogany:#2A1208;
+  --walnut:#4A2010;
+  --bark:#6B3820;
+  --gold:#C9991F;
+  --gold-bright:#E0B840;
+  --gold-muted:#8A6A18;
+  --cream:#F0E6C8;
+  --cream-dim:#C4B48A;
+  --warm-white:#FBF5E8;
+  --muted:#7A6040;
+  --success:#5A9E6A;
+  --danger:#B04040;
+  --soft-border:rgba(201,153,31,.22);
+  --card:rgba(0,0,0,.30);
+}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--mahogany);
+  color:var(--cream);
+  line-height:1.6;
+  padding:44px;
+}
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+}
+.wrap{max-width:1200px;margin:auto}
+.hero{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:24px;
+  align-items:stretch;
+  margin-bottom:28px;
+}
+.hero-left{
+  background:linear-gradient(160deg,var(--walnut),var(--espresso));
+  border:1px solid var(--soft-border);
+  border-radius:12px;
+  padding:42px;
+}
+.kicker{
+  font-family:'DM Mono',monospace;
+  color:var(--gold);
+  text-transform:uppercase;
+  letter-spacing:.16em;
+  font-size:12px;
+  margin-bottom:14px;
+}
+h1{
+  font-family:'Cormorant Garamond',serif;
+  font-size:76px;
+  line-height:.9;
+  color:var(--warm-white);
+  margin-bottom:22px;
+}
+h1 em{font-style:normal;color:var(--gold)}
+.hero-left p{color:var(--cream-dim);font-size:17px;max-width:680px}
+.hero-right{
+  background:var(--espresso);
+  border:1px solid var(--soft-border);
+  border-radius:12px;
+  padding:32px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.hero-right h2{
+  font-family:'Cormorant Garamond',serif;
+  color:var(--gold);
+  font-size:58px;
+  font-weight:300;
+  letter-spacing:.22em;
+  text-align:center;
+  margin-bottom:6px;
+}
+.hero-right p{
+  font-family:'DM Mono',monospace;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.2em;
+  text-align:center;
+  font-size:12px;
+}
+.section-title{
+  display:flex;
+  align-items:stretch;
+  border:1px solid var(--gold);
+  border-radius:8px;
+  overflow:hidden;
+  margin:34px 0 18px;
+}
+.section-title .num{
+  background:var(--gold);
+  color:var(--espresso);
+  font-family:'DM Mono',monospace;
+  padding:10px 18px;
+  font-weight:500;
+}
+.section-title .label{
+  color:var(--warm-white);
+  background:rgba(0,0,0,.35);
+  font-family:'Cormorant Garamond',serif;
+  font-size:24px;
+  padding:8px 20px;
+  font-weight:600;
+  flex:1;
+}
+.card{
+  background:var(--card);
+  border:1px solid rgba(201,153,31,.16);
+  border-radius:10px;
+  padding:20px;
+  margin-bottom:18px;
+}
+.note{
+  border-left:3px solid var(--gold);
+  background:rgba(201,153,31,.08);
+  padding:14px 18px;
+  color:var(--cream-dim);
+  border-radius:0 8px 8px 0;
+  margin-bottom:18px;
+}
+.note strong{color:var(--gold-bright)}
+table{
+  width:100%;
+  border-collapse:collapse;
+  overflow:hidden;
+  border-radius:10px;
+  background:rgba(0,0,0,.22);
+}
+th{
+  background:var(--espresso);
+  color:var(--gold);
+  font-family:'DM Mono',monospace;
+  font-size:12px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  text-align:left;
+  padding:13px 14px;
+  border-bottom:1px solid rgba(201,153,31,.28);
+}
+td{
+  padding:13px 14px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  color:var(--cream-dim);
+  vertical-align:top;
+  font-size:14px;
+}
+tr:last-child td{border-bottom:none}
+td strong{color:var(--cream);font-weight:600}
+.sample{
+  background:rgba(0,0,0,.32);
+  border:1px solid rgba(201,153,31,.16);
+  border-radius:8px;
+  padding:10px 12px;
+  color:var(--warm-white);
+}
+.font-cormorant{font-family:'Cormorant Garamond',serif}
+.font-sans{font-family:'DM Sans',sans-serif}
+.font-mono{font-family:'DM Mono',monospace}
+.color-chip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:rgba(0,0,0,.28);
+  border:1px solid rgba(201,153,31,.14);
+  border-radius:8px;
+  padding:10px;
+}
+.swatch{
+  width:38px;
+  height:38px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,.16);
+  flex:0 0 auto;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+}
+code{
+  font-family:'DM Mono',monospace;
+  color:var(--gold-bright);
+  background:rgba(201,153,31,.10);
+  padding:2px 6px;
+  border-radius:4px;
+}
+.small{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
+.checklist{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+ul{padding-left:20px}
+li{margin:.35rem 0;color:var(--cream-dim)}
+.footer{
+  margin-top:32px;
+  padding-top:18px;
+  border-top:1px solid rgba(201,153,31,.18);
+  color:var(--muted);
+  font-size:13px;
+  text-align:center;
+}
+@media(max-width:900px){
+  body{padding:22px}
+  .hero{grid-template-columns:1fr}
+  h1{font-size:56px}
+  .grid,.checklist{grid-template-columns:1fr}
+  table{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section class="hero">
+    <div class="hero-left">
+      <div class="kicker">Panem Visual System · Canva Guide</div>
+      <h1>Typography<br><em>& Color</em><br>Guide</h1>
+      <p>Guía práctica para replicar en Canva el estilo visual de las presentaciones HTML de Panem: fondo espresso/mahogany, acentos dorados, tipografía editorial y componentes tipo dashboard.</p>
+    </div>
+    <div class="hero-right">
+      <h2>PANEM</h2>
+      <p>Bakery & Bistro</p>
+    </div>
+  </section>
+
+  <div class="section-title"><span class="num">01</span><span class="label">Tipografías identificadas en los HTML</span></div>
+  <div class="note">
+    <strong>Fuentes principales:</strong> Cormorant Garamond, DM Sans y DM Mono. En Canva búscalas por estos mismos nombres. Si alguna no aparece, usa alternativas: Playfair Display para Cormorant, Inter para DM Sans y Space Mono para DM Mono.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Uso en Canva</th>
+        <th>Fuente</th>
+        <th>Peso sugerido</th>
+        <th>Tamaño sugerido</th>
+        <th>Color sugerido</th>
+        <th>Ejemplo visual</th>
+        <th>Notas de estilo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Título principal / portada</strong></td>
+        <td>Cormorant Garamond</td>
+        <td>Bold 700</td>
+        <td>68–88 pt</td>
+        <td>Warm White #FBF5E8 + Gold #C9991F</td>
+        <td><div class="sample font-cormorant" style="font-size:34px;font-weight:700;line-height:.95">Panem <span style="color:var(--gold)">Demand</span></div></td>
+        <td>Usar alto contraste, pocas palabras y line-height cerrado. Ideal para portada y divisores.</td>
+      </tr>
+      <tr>
+        <td><strong>Wordmark / “PANEM” grande</strong></td>
+        <td>Cormorant Garamond</td>
+        <td>Light 300</td>
+        <td>60–82 pt</td>
+        <td>Gold #C9991F</td>
+        <td><div class="sample font-cormorant" style="font-size:34px;font-weight:300;letter-spacing:.22em;color:var(--gold)">PANEM</div></td>
+        <td>Usar espaciado alto entre letras. En Canva: Letter spacing alto, aprox. 180–250.</td>
+      </tr>
+      <tr>
+        <td><strong>Títulos de sección</strong></td>
+        <td>Cormorant Garamond</td>
+        <td>SemiBold 600</td>
+        <td>30–40 pt</td>
+        <td>Warm White #FBF5E8</td>
+        <td><div class="sample font-cormorant" style="font-size:28px;font-weight:600;color:var(--warm-white)">Project Context</div></td>
+        <td>Combinar con una etiqueta numérica dorada para replicar los headers del HTML.</td>
+      </tr>
+      <tr>
+        <td><strong>Títulos dentro de cards</strong></td>
+        <td>Cormorant Garamond</td>
+        <td>SemiBold 600</td>
+        <td>22–28 pt</td>
+        <td>Gold Bright #E0B840</td>
+        <td><div class="sample font-cormorant" style="font-size:24px;font-weight:600;color:var(--gold-bright)">Key Finding</div></td>
+        <td>Ideal para tarjetas de hallazgos, modelos, dashboard demo y conclusiones.</td>
+      </tr>
+      <tr>
+        <td><strong>Texto principal / bullets</strong></td>
+        <td>DM Sans</td>
+        <td>Regular 400 / Medium 500</td>
+        <td>16–20 pt</td>
+        <td>Cream Dim #C4B48A</td>
+        <td><div class="sample font-sans" style="font-size:16px;color:var(--cream-dim)">Demand forecasting supports production planning.</div></td>
+        <td>Usar para bullets y explicaciones. Mantener frases cortas, ejecutivas y legibles.</td>
+      </tr>
+      <tr>
+        <td><strong>Texto destacado / conclusión corta</strong></td>
+        <td>DM Sans</td>
+        <td>Medium 500 / SemiBold 600</td>
+        <td>18–24 pt</td>
+        <td>Cream #F0E6C8</td>
+        <td><div class="sample font-sans" style="font-size:18px;font-weight:600;color:var(--cream)">Forecasts guide decisions, not replace them.</div></td>
+        <td>Úsalo en mensajes ejecutivos, notas de interpretación y recomendaciones.</td>
+      </tr>
+      <tr>
+        <td><strong>Kickers / etiquetas pequeñas</strong></td>
+        <td>DM Mono</td>
+        <td>Medium 500</td>
+        <td>10–13 pt</td>
+        <td>Gold #C9991F</td>
+        <td><div class="sample font-mono" style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">Executive Message</div></td>
+        <td>Usar en etiquetas superiores, número de sección, tags de modelos y fechas.</td>
+      </tr>
+      <tr>
+        <td><strong>Métricas / KPIs</strong></td>
+        <td>DM Mono</td>
+        <td>Medium 500</td>
+        <td>28–44 pt</td>
+        <td>Gold Bright #E0B840</td>
+        <td><div class="sample font-mono" style="font-size:30px;font-weight:500;color:var(--gold-bright)">3.76M</div></td>
+        <td>Perfecta para números grandes: 186 CSVs, 7 branches, 35 targets, etc.</td>
+      </tr>
+      <tr>
+        <td><strong>Notas técnicas / código / variables</strong></td>
+        <td>DM Mono</td>
+        <td>Regular 400</td>
+        <td>12–15 pt</td>
+        <td>Gold Bright #E0B840</td>
+        <td><div class="sample font-mono" style="font-size:13px;color:var(--gold-bright)">qty_roll_7 · WAPE · RMSE</div></td>
+        <td>Usar con moderación para variables, métricas y nombres de modelos.</td>
+      </tr>
+      <tr>
+        <td><strong>Footer / notas secundarias</strong></td>
+        <td>DM Sans o DM Mono</td>
+        <td>Regular 400</td>
+        <td>10–12 pt</td>
+        <td>Muted #7A6040</td>
+        <td><div class="sample font-sans" style="font-size:12px;color:var(--muted)">Panem Bakery & Bistro · June 11, 2026</div></td>
+        <td>Ideal para fecha, equipo, fuente o contexto breve al pie de diapositiva.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-title"><span class="num">02</span><span class="label">Paleta de colores para Canva</span></div>
+  <div class="grid">
+    <div class="color-chip"><div class="swatch" style="background:#130A04"></div><div><strong>Espresso</strong><br><code>#130A04</code><br><span class="small">Fondo profundo</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#2A1208"></div><div><strong>Mahogany</strong><br><code>#2A1208</code><br><span class="small">Fondo principal</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#4A2010"></div><div><strong>Walnut</strong><br><code>#4A2010</code><br><span class="small">Degradados</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#6B3820"></div><div><strong>Bark</strong><br><code>#6B3820</code><br><span class="small">Acento café</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#C9991F"></div><div><strong>Gold</strong><br><code>#C9991F</code><br><span class="small">Acento principal</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#E0B840"></div><div><strong>Gold Bright</strong><br><code>#E0B840</code><br><span class="small">Destacados</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#F0E6C8"></div><div><strong>Cream</strong><br><code>#F0E6C8</code><br><span class="small">Texto principal</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#C4B48A"></div><div><strong>Cream Dim</strong><br><code>#C4B48A</code><br><span class="small">Bullets</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#FBF5E8"></div><div><strong>Warm White</strong><br><code>#FBF5E8</code><br><span class="small">Títulos claros</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#7A6040"></div><div><strong>Muted</strong><br><code>#7A6040</code><br><span class="small">Texto secundario</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#5A9E6A"></div><div><strong>Success</strong><br><code>#5A9E6A</code><br><span class="small">Mejoras</span></div></div>
+    <div class="color-chip"><div class="swatch" style="background:#B04040"></div><div><strong>Danger</strong><br><code>#B04040</code><br><span class="small">Riesgos</span></div></div>
+  </div>
+
+  <div class="section-title"><span class="num">03</span><span class="label">Reglas rápidas para replicarlo en Canva</span></div>
+  <div class="checklist">
+    <div class="card">
+      <div class="kicker">Do</div>
+      <ul>
+        <li>Usa fondos oscuros: <code>#2A1208</code> o <code>#130A04</code>.</li>
+        <li>Usa Cormorant Garamond para títulos elegantes.</li>
+        <li>Usa DM Sans para bullets y explicaciones.</li>
+        <li>Usa DM Mono para números, KPIs, tags y métricas.</li>
+        <li>Agrega bordes dorados delgados en cards y screenshots.</li>
+        <li>Usa dorado solo para acentos, no para todo el texto.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="kicker">Avoid</div>
+      <ul>
+        <li>No uses fondos blancos en secciones principales.</li>
+        <li>No mezcles más de estas tres familias tipográficas.</li>
+        <li>No pongas mucho texto en la diapositiva; deja el detalle como speaker note.</li>
+        <li>No uses tablas extensas; convierte datos en cards o gráficas.</li>
+        <li>No satures con dorado; úsalo para jerarquía visual.</li>
+        <li>No hagas los bullets más pequeños de 16 pt.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="num">04</span><span class="label">Preset recomendado por tipo de diapositiva</span></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tipo de slide</th>
+        <th>Fondo</th>
+        <th>Título</th>
+        <th>Texto</th>
+        <th>Acentos</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Portada</strong></td>
+        <td>Degradado Walnut → Espresso</td>
+        <td>Cormorant Garamond 76–88 pt, #FBF5E8 + #C9991F</td>
+        <td>DM Sans 16–18 pt, #C4B48A</td>
+        <td>Panem en dorado con letter spacing alto</td>
+      </tr>
+      <tr>
+        <td><strong>Contexto / metodología</strong></td>
+        <td>Mahogany #2A1208</td>
+        <td>Cormorant Garamond 34–40 pt, #FBF5E8</td>
+        <td>DM Sans 17–19 pt, #C4B48A</td>
+        <td>Cards con borde rgba dorado</td>
+      </tr>
+      <tr>
+        <td><strong>Hallazgos clave</strong></td>
+        <td>Mahogany + card negra translúcida</td>
+        <td>Cormorant Garamond 34 pt, #FBF5E8</td>
+        <td>DM Sans 16–18 pt, #C4B48A</td>
+        <td>Chart panel + insight box con borde izquierdo dorado</td>
+      </tr>
+      <tr>
+        <td><strong>Modelos / métricas</strong></td>
+        <td>Espresso #130A04 o Mahogany</td>
+        <td>Cormorant Garamond 32–38 pt</td>
+        <td>DM Sans para interpretación, DM Mono para métricas</td>
+        <td>KPIs en #E0B840 y mejoras en #5A9E6A</td>
+      </tr>
+      <tr>
+        <td><strong>Demo dashboard</strong></td>
+        <td>Mahogany</td>
+        <td>Cormorant Garamond 32–38 pt</td>
+        <td>DM Sans 15–17 pt en callouts</td>
+        <td>Screenshot con borde #C9991F y etiquetas DM Mono</td>
+      </tr>
+      <tr>
+        <td><strong>Cierre</strong></td>
+        <td>Espresso #130A04</td>
+        <td>Cormorant Garamond 60–76 pt, #C9991F</td>
+        <td>DM Sans 18–22 pt, #F0E6C8</td>
+        <td>Frase final centrada y mucho espacio negativo</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Panem Canva Typography & Color Guide · Built from the visual system used in the provided HTML presentations
+  </div>
+</div>
+</body>
+</html>

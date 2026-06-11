@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Models — Panem Demand Forecasting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --espresso:#130A04;
+  --mahogany:#2A1208;
+  --walnut:#4A2010;
+  --bark:#6B3820;
+  --gold:#C9991F;
+  --gold-bright:#E0B840;
+  --gold-muted:#8A6A18;
+  --cream:#F0E6C8;
+  --cream-dim:#C4B48A;
+  --warm-white:#FBF5E8;
+  --muted:#7A6040;
+  --success:#5A9E6A;
+  --warn:#C49A28;
+  --danger:#B04040;
+  --nav-h:60px;
+  --section-pad:6rem 4rem;
+  --r:8px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--mahogany);
+  color:var(--cream);
+  line-height:1.65;
+  overflow-x:hidden;
+}
+/* grain overlay */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.025;
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;
+  height:var(--nav-h);
+  background:rgba(19,10,4,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(201,153,31,.25);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2.5rem;
+  z-index:1000;
+}
+.nav-brand{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.3rem;font-weight:600;
+  color:var(--gold);
+  letter-spacing:.08em;
+  text-decoration:none;
+}
+.nav-links{display:flex;gap:1.8rem;list-style:none}
+.nav-links a{
+  color:var(--muted);
+  text-decoration:none;
+  font-size:.78rem;
+  font-weight:500;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  transition:color .2s;
+}
+.nav-links a:hover{color:var(--gold)}
+
+/* ── SECTION BASE ── */
+section{
+  padding:var(--section-pad);
+  max-width:1160px;
+  margin:0 auto;
+}
+section+section{padding-top:4rem}
+
+/* ── SEC HEADER ── */
+.sec-head{
+  display:flex;align-items:stretch;
+  border:1px solid var(--gold);
+  border-radius:var(--r);
+  overflow:hidden;
+  margin-bottom:2.8rem;
+}
+.sec-num{
+  background:var(--gold);
+  color:var(--espresso);
+  font-family:'DM Mono',monospace;
+  font-size:1rem;font-weight:500;
+  padding:.6rem 1.4rem;
+  display:flex;align-items:center;justify-content:center;
+  min-width:64px;
+}
+.sec-label{
+  background:rgba(0,0,0,.35);
+  color:var(--warm-white);
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.35rem;font-weight:600;
+  padding:.55rem 1.8rem;
+  display:flex;align-items:center;
+  letter-spacing:.04em;
+}
+
+/* ── HERO ── */
+#hero{
+  min-height:100vh;
+  max-width:100%;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  padding:0;
+}
+.hero-l{
+  background:linear-gradient(160deg, var(--walnut) 0%, var(--espresso) 100%);
+  padding:8rem 4.5rem;
+  display:flex;flex-direction:column;justify-content:center;
+  border-right:1px solid rgba(201,153,31,.3);
+}
+.hero-r{
+  background:var(--espresso);
+  display:flex;align-items:center;justify-content:center;
+  padding:4rem;
+  position:relative;
+  overflow:hidden;
+}
+.hero-r::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(201,153,31,.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 75% 75%, rgba(74,32,16,.6) 0%, transparent 50%);
+}
+.hero-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:5.5rem;line-height:.95;
+  font-weight:700;
+  color:var(--warm-white);
+  margin-bottom:3.5rem;
+}
+.hero-title em{color:var(--gold);font-style:normal}
+.lbl{
+  font-size:.7rem;font-weight:500;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:.6rem;
+}
+.hero-team{list-style:none;margin-bottom:2.5rem}
+.hero-team li{
+  font-size:.88rem;color:var(--cream-dim);
+  padding:.18rem 0;border-bottom:1px solid rgba(201,153,31,.08);
+}
+.hero-date{font-size:.88rem;color:var(--muted)}
+.hero-badge{
+  position:relative;z-index:1;
+  text-align:center;
+}
+.hero-badge h2{
+  font-family:'Cormorant Garamond',serif;
+  font-size:5rem;font-weight:300;
+  color:var(--gold);letter-spacing:.25em;
+  line-height:1;margin-bottom:.5rem;
+}
+.hero-badge p{
+  font-size:.78rem;letter-spacing:.35em;
+  text-transform:uppercase;color:var(--muted);
+}
+.hero-badge .sub{
+  margin-top:2rem;font-size:.8rem;
+  color:var(--muted);letter-spacing:.05em;
+  font-style:italic;
+  font-family:'Cormorant Garamond',serif;
+}
+.tags{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1.5rem;justify-content:center}
+.tag{
+  background:rgba(201,153,31,.12);
+  border:1px solid rgba(201,153,31,.35);
+  color:var(--gold-bright);
+  border-radius:3px;padding:.2rem .65rem;
+  font-size:.72rem;font-weight:500;
+  letter-spacing:.05em;
+  font-family:'DM Mono',monospace;
+}
+
+/* ── INDEX ── */
+#index{min-height:auto;padding-bottom:3rem}
+.idx-table{width:100%;border-collapse:separate;border-spacing:0 .5rem}
+.idx-table td:first-child{
+  background:var(--gold);color:var(--espresso);
+  font-family:'DM Mono',monospace;font-size:.9rem;font-weight:500;
+  padding:.85rem 1.4rem;width:70px;text-align:center;
+  border-radius:var(--r) 0 0 var(--r);
+}
+.idx-table td:last-child{
+  background:rgba(0,0,0,.28);color:var(--cream);
+  padding:.85rem 2rem;font-size:.95rem;
+  border-radius:0 var(--r) var(--r) 0;
+  border:1px solid rgba(201,153,31,.1);border-left:none;
+}
+.idx-table tr{cursor:pointer;transition:opacity .2s}
+.idx-table tr:hover td{opacity:.75}
+.idx-table a{color:inherit;text-decoration:none}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+
+/* ── CARDS ── */
+.card{
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(201,153,31,.15);
+  border-radius:var(--r);
+  padding:1.8rem;
+}
+.card h3{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.25rem;font-weight:600;
+  color:var(--gold-bright);
+  margin-bottom:.8rem;
+}
+.card p,.card li{font-size:.9rem;color:var(--cream-dim);line-height:1.6}
+.card ul{padding-left:1.2rem}
+.card li{margin-bottom:.35rem}
+.card-light{
+  background:rgba(240,230,200,.07);
+  border:1px solid rgba(201,153,31,.2);
+  border-radius:var(--r);
+  padding:1.8rem;
+}
+.card-light h3{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.2rem;font-weight:600;
+  color:var(--espresso);margin-bottom:.8rem;
+}
+
+/* ── STAT CARDS ── */
+.stat{
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(201,153,31,.2);
+  border-radius:var(--r);
+  padding:1.4rem;text-align:center;
+}
+.stat-lbl{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+.stat-val{
+  font-family:'Cormorant Garamond',serif;
+  font-size:2.2rem;font-weight:700;color:var(--gold);
+  line-height:1;
+}
+.stat-sub{font-size:.72rem;color:var(--muted);margin-top:.25rem}
+
+/* ── ICON CIRCLES ── */
+.ico{
+  width:72px;height:72px;border-radius:50%;
+  border:2px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto .9rem;font-size:1.6rem;
+  background:rgba(201,153,31,.08);
+}
+.ico-card{text-align:center}
+.ico-card h3{text-align:center}
+
+/* ── HIGHLIGHT ── */
+.hl{
+  background:rgba(201,153,31,.1);
+  border-left:3px solid var(--gold);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:1rem 1.5rem;
+  font-size:.88rem;color:var(--cream-dim);
+}
+.hl strong{color:var(--gold)}
+
+/* ── TABLES ── */
+.tbl-wrap{
+  background:rgba(0,0,0,.5);
+  border:1px solid rgba(201,153,31,.2);
+  border-radius:var(--r);
+  overflow:hidden;overflow-x:auto;
+}
+table.dt{width:100%;border-collapse:collapse;font-size:.82rem}
+table.dt th{
+  background:var(--espresso);
+  color:var(--gold);
+  font-family:'DM Mono',monospace;font-size:.72rem;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:.65rem 1rem;text-align:left;
+}
+table.dt td{
+  padding:.55rem 1rem;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  color:var(--cream-dim);
+  font-family:'DM Mono',monospace;font-size:.82rem;
+}
+table.dt tr:hover td{background:rgba(201,153,31,.06);color:var(--cream)}
+.wg{color:#5dbf75;font-weight:500}
+.wo{color:#C9991F;font-weight:500}
+.wb{color:#b05050;font-weight:500}
+
+/* feature table */
+table.ft{width:100%;border-collapse:collapse;font-size:.86rem}
+table.ft th{
+  background:var(--gold);color:var(--espresso);
+  padding:.55rem 1rem;text-align:left;font-weight:500;
+  font-family:'DM Mono',monospace;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;
+}
+table.ft td{
+  padding:.5rem 1rem;
+  border-bottom:1px solid rgba(201,153,31,.12);
+  color:var(--cream-dim);
+}
+table.ft tr:nth-child(even) td{background:rgba(0,0,0,.15)}
+
+/* ── TERMINAL ── */
+.term{
+  background:#0A0603;
+  border:1px solid rgba(201,153,31,.25);
+  border-radius:var(--r);
+  padding:1.4rem 1.6rem;
+  font-family:'DM Mono',monospace;font-size:.8rem;
+  color:#9AB080;line-height:1.8;
+  overflow-x:auto;
+}
+.term .k{color:var(--gold-bright)}
+.term .v{color:#E8E8D8}
+.term .c{color:#4A5E3A}
+
+/* ── CODE ── */
+code{
+  font-family:'DM Mono',monospace;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(201,153,31,.2);
+  padding:.1em .4em;border-radius:3px;
+  font-size:.82em;color:var(--gold-bright);
+}
+
+/* ── TABS ── */
+.tab-bar{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.5rem}
+.tb{
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(201,153,31,.2);
+  border-radius:5px;
+  padding:.42rem 1.1rem;
+  font-size:.78rem;font-weight:500;
+  color:var(--muted);cursor:pointer;
+  transition:all .18s;
+  font-family:'DM Sans',sans-serif;
+  letter-spacing:.03em;
+}
+.tb:hover{border-color:var(--gold);color:var(--cream)}
+.tb.active{background:var(--gold);color:var(--espresso);border-color:var(--gold);font-weight:600}
+.tp{display:none}
+.tp.active{display:block}
+
+/* ── NB SECTIONS GRID ── */
+.nb-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:.6rem;margin-top:1.2rem;
+}
+.nb-cell{
+  background:rgba(0,0,0,.3);
+  border-left:2px solid var(--gold-muted);
+  padding:.6rem .9rem;
+  border-radius:0 4px 4px 0;
+}
+.nb-n{font-size:.68rem;color:var(--gold);font-family:'DM Mono',monospace;margin-bottom:.15rem}
+.nb-t{font-size:.78rem;color:var(--cream-dim);line-height:1.3}
+
+/* ── BRANCH HEADER ── */
+.branch-hdr{
+  display:flex;align-items:center;gap:1.5rem;
+  padding:1.5rem 2rem;
+  background:linear-gradient(90deg, rgba(201,153,31,.15) 0%, transparent 100%);
+  border:1px solid rgba(201,153,31,.25);
+  border-radius:var(--r);margin-bottom:1.5rem;
+}
+.branch-dot{
+  width:14px;height:14px;border-radius:50%;
+  background:var(--gold);flex-shrink:0;
+  box-shadow:0 0 12px rgba(201,153,31,.6);
+}
+.branch-name{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.6rem;font-weight:600;color:var(--warm-white);
+}
+.branch-meta{font-size:.8rem;color:var(--muted);font-family:'DM Mono',monospace}
+.branch-note{
+  margin-left:auto;
+  background:rgba(201,153,31,.12);
+  border:1px solid var(--gold-muted);
+  border-radius:4px;padding:.3rem .8rem;
+  font-size:.75rem;color:var(--gold-bright);
+  font-family:'DM Mono',monospace;
+  white-space:nowrap;
+}
+
+/* ── FOOTER ── */
+footer{
+  background:var(--espresso);
+  border-top:1px solid rgba(201,153,31,.2);
+  text-align:center;padding:2rem;
+  color:var(--muted);font-size:.8rem;
+}
+footer span{color:var(--gold-muted)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .6s ease both}
+.fade-up.d1{animation-delay:.1s}
+.fade-up.d2{animation-delay:.2s}
+.fade-up.d3{animation-delay:.3s}
+
+/* ── EVIDENCE CHARTS ── */
+.model-sel{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0 1rem}
+.mb{display:flex;align-items:center;gap:.4rem;padding:.32rem .85rem;border-radius:20px;border:1.5px solid rgba(201,153,31,.2);background:rgba(19,10,4,.4);color:var(--cream-dim);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;letter-spacing:.03em}
+.mb:hover{border-color:var(--gold);color:var(--cream)}
+.mb.active{background:rgba(201,153,31,.18);border-color:var(--gold);color:var(--gold);font-weight:600}
+.mdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.c4g{display:grid;grid-template-columns:repeat(4,minmax(210px,1fr));gap:.9rem;margin-bottom:1.2rem;overflow-x:auto;padding-bottom:.5rem;scroll-snap-type:x mandatory}
+.c4g>.cw{scroll-snap-align:start}
+.c5g{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:.9rem;margin-bottom:1.2rem}
+.cw{background:rgba(19,10,4,.45);border:1px solid rgba(201,153,31,.12);border-radius:var(--r);padding:.7rem;position:relative}
+.cw-xbtn{position:absolute;top:.35rem;right:.35rem;width:22px;height:22px;background:rgba(201,153,31,.12);border:1px solid rgba(201,153,31,.25);border-radius:4px;color:var(--gold-muted);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:2;line-height:1}
+.cw-xbtn:hover{background:rgba(201,153,31,.28);color:var(--gold);border-color:var(--gold)}
+.cmodal{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;animation:cmFade .15s ease}
+@keyframes cmFade{from{opacity:0}to{opacity:1}}
+.cmodal-in{background:var(--mahogany);border:1px solid rgba(201,153,31,.3);border-radius:var(--r);padding:1.5rem 1.5rem 1rem;width:min(93vw,1140px);max-height:88vh;position:relative;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+.cmodal-btns{position:absolute;top:.55rem;right:.7rem;display:flex;gap:.4rem;align-items:center}
+.cmodal-close,.cmodal-act{background:none;border:1px solid rgba(201,153,31,.25);border-radius:4px;color:var(--muted);font-size:.8rem;padding:.2rem .65rem;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif}
+.cmodal-close:hover{border-color:var(--gold);color:var(--gold)}
+.cmodal-act:hover{border-color:var(--gold);color:var(--cream)}
+.cmodal-act.sel-all{color:var(--gold-muted)}
+.cmodal-act.clr-all{color:var(--muted)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  #hero{grid-template-columns:1fr}
+  .hero-r{display:none}
+  .hero-title{font-size:3.5rem}
+  section{padding:4rem 1.5rem}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .nb-grid{grid-template-columns:repeat(2,1fr)}
+  nav{padding:0 1.2rem}
+  .nav-links{display:none}
+}
+@media(max-width:600px){
+  .hero-l{padding:6rem 2rem}
+  .nb-grid{grid-template-columns:1fr 1fr}
+  .c5g{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <a class="nav-brand" href="#hero">Panem · ML</a>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#dataset">Dataset</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#evidence">Evidence</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+  </ul>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-l">
+    <h1 class="hero-title fade-up">4.2<br><em>ML</em><br>Presentation</h1>
+    <p class="lbl fade-up d1">Presentado por</p>
+    <ul class="hero-team fade-up d2">
+      <li>Jesús Emiliano Morales Villela &mdash; A00840087</li>
+      <li>Luis Diego Dominguez Larrieta &mdash; A01275640</li>
+      <li>David Alexander Lopez Guzman &mdash; A00835935</li>
+      <li>Jose Dolores Gomez Soto &mdash; A01712281</li>
+      <li>Ignacio Xavier Chávez Quiroz &mdash; A00574357</li>
+    </ul>
+    <p class="lbl fade-up d3">Fecha</p>
+    <p class="hero-date fade-up d3">21 / 04 / 2026</p>
+  </div>
+  <div class="hero-r">
+    <div class="hero-badge fade-up d1">
+      <h2>Panem</h2>
+      <p>Bakery &amp; Bistro</p>
+      <p class="sub">Demand Forecasting · 7 Branches · Jan 2022 – Feb 2026</p>
+      <div class="tags">
+        <span class="tag">ARIMA</span><span class="tag">SARIMA</span>
+        <span class="tag">Prophet</span><span class="tag">LightGBM</span>
+        <span class="tag">XGBoost</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ INDEX ══ -->
+<section id="index" style="padding-top:calc(var(--nav-h) + 3rem);padding-bottom:3rem;min-height:auto">
+  <div class="sec-head"><span class="sec-num">02</span><span class="sec-label">Index</span></div>
+  <table class="idx-table">
+    <tbody>
+      <tr onclick="location.href='#hero'"><td>01</td><td><a href="#hero">Cover — Panem Demand Forecasting</a></td></tr>
+      <tr onclick="location.href='#index'"><td>02</td><td><a href="#index">Index</a></td></tr>
+      <tr onclick="location.href='#problem'"><td>03</td><td><a href="#problem">Problem</a></td></tr>
+      <tr onclick="location.href='#dataset'"><td>04</td><td><a href="#dataset">Dataset Structure</a></td></tr>
+      <tr onclick="location.href='#dataprep'"><td>05</td><td><a href="#dataprep">Data Preparation</a></td></tr>
+      <tr onclick="location.href='#features'"><td>06</td><td><a href="#features">Feature Preparation</a></td></tr>
+      <tr onclick="location.href='#behavior'"><td>07</td><td><a href="#behavior">Sales Behavior</a></td></tr>
+      <tr onclick="location.href='#patterns'"><td>08</td><td><a href="#patterns">Key Patterns</a></td></tr>
+      <tr onclick="location.href='#models'"><td>09</td><td><a href="#models">Models — ARIMA · SARIMA · Prophet · LightGBM · XGBoost · Ensemble</a></td></tr>
+      <tr onclick="location.href='#results'"><td>10</td><td><a href="#results">XGBoost Results — 35 Models Across 7 Branches</a></td></tr>
+      <tr onclick="location.href='#evidence'"><td>11</td><td><a href="#evidence">Evidence Notebooks — 7 Branch Deep Dives (ARIMA · SARIMA · Prophet · LightGBM)</a></td></tr>
+      <tr onclick="location.href='#conclusion'"><td>12</td><td><a href="#conclusion">Conclusion</a></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══ PROBLEM ══ -->
+<section id="problem" style="padding-top:calc(var(--nav-h) + 3rem)">
+  <div class="sec-head"><span class="sec-num">03</span><span class="sec-label">Problem</span></div>
+  <div class="g2" style="align-items:start;gap:2rem">
+    <div>
+      <div class="g2" style="gap:1.2rem;margin-bottom:1.2rem">
+        <div class="card ico-card">
+          <div class="ico">⭐</div>
+          <h3>Business Problem</h3>
+          <p>Predict daily sales per product and branch to support centralized production planning.</p>
+        </div>
+        <div class="card ico-card">
+          <div class="ico">📈</div>
+          <h3>ML Problem</h3>
+          <p>Supervised learning leading to <strong style="color:var(--gold)">regression / time-series forecasting</strong>.</p>
+        </div>
+      </div>
+      <div class="card ico-card">
+        <div class="ico">⚠️</div>
+        <h3>Challenge — Demand Is:</h3>
+        <ul style="text-align:left">
+          <li>Highly variable day-to-day</li>
+          <li>Zero-inflated (many days with no sales per product)</li>
+          <li>Influenced by external factors (weather, holidays, quincena)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="height:100%">
+      <h3>Context</h3>
+      <p style="margin-bottom:1rem">We are trying to predict how many units of each product will be sold per day. The challenge is that the data is very noisy and has many zero values, which makes modeling more complex.</p>
+      <div class="hl" style="margin-top:1.2rem"><strong>Why this matters:</strong> Over-production leads to waste; under-production leads to lost sales and empty shelves. A 7-day demand forecast allows production managers to place accurate orders weekly.</div>
+      <div style="margin-top:1.5rem" class="g2">
+        <div class="stat"><div class="stat-lbl">Branches</div><div class="stat-val">7</div></div>
+        <div class="stat"><div class="stat-lbl">Forecast horizon</div><div class="stat-val">7d</div></div>
+        <div class="stat"><div class="stat-lbl">History</div><div class="stat-val">4yr</div></div>
+        <div class="stat"><div class="stat-lbl">Models</div><div class="stat-val">6</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ DATASET ══ -->
+<section id="dataset">
+  <div class="sec-head"><span class="sec-num">04</span><span class="sec-label">Dataset Structure</span></div>
+  <div class="g3" style="margin-bottom:2rem">
+    <div class="card ico-card">
+      <div class="ico">🔍</div>
+      <h3>Unit of Analysis</h3>
+      <ul><li>Product – Branch – Day</li><li>Each row = one daily sales record</li><li>Granular level for modeling</li></ul>
+    </div>
+    <div class="card ico-card">
+      <div class="ico">🛒</div>
+      <h3>Target Variable</h3>
+      <ul><li><code>quantity</code> — units sold</li><li>Daily demand per product</li><li>Main variable to predict</li></ul>
+    </div>
+    <div class="card ico-card">
+      <div class="ico">📅</div>
+      <h3>Key Features</h3>
+      <ul><li>Time: day, week, month</li><li>External: temperature (°C)</li><li>Engineered: rolling sales (7, 30, 90 d)</li><li>Calendar: holidays, quincena</li></ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Dataset Overview — 7 Branches (XGBoost Analysis)</h3>
+    <div class="tbl-wrap" style="margin-top:1rem">
+      <table class="dt">
+        <thead><tr><th>Branch</th><th>Dataset File</th><th>Rows</th><th>Products</th><th>Date Range</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>Panem – La Carreta</td><td><code>branch3_carreta.csv</code></td><td>7,274</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td style="color:var(--warn)">Closed Sundays</td></tr>
+          <tr><td>Panem – Credi Club</td><td><code>branch3_credi_club.csv</code></td><td>2,217</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td>Smallest dataset</td></tr>
+          <tr><td>Panem – Hospital Zambrano</td><td><code>branch3_hospital_zambrano.csv</code></td><td>6,875</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td>—</td></tr>
+          <tr><td>Panem – Hotel Kavia</td><td><code>branch3_hotel_kavia.csv</code></td><td>6,210</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td>—</td></tr>
+          <tr><td>Panem – Plaza Nativa</td><td><code>branch3_plaza_nativa.csv</code></td><td>3,614</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td>—</td></tr>
+          <tr><td>Panem – Plaza QIN</td><td><code>branch3_plaza_qin.csv</code></td><td>5,849</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td>—</td></tr>
+          <tr><td>Panem – Punto Valle</td><td><code>branch3_punto_valle.csv</code></td><td>7,365</td><td>10 / 10</td><td>Jan 2022 – Feb 2026</td><td style="color:var(--warn)">Highest demand</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.8rem">XGBoost analysis: 5 products per branch. ARIMA, SARIMA, LightGBM, and Prophet: top 10 products per branch.</p>
+  </div>
+</section>
+
+<!-- ══ DATA PREP ══ -->
+<section id="dataprep">
+  <div class="sec-head"><span class="sec-num">05</span><span class="sec-label">Data Preparation</span></div>
+  <div class="g2" style="align-items:start;gap:2rem">
+    <div>
+      <p style="color:var(--cream-dim);margin-bottom:1rem">The dataset was prepared to ensure reliability for modeling. Missing values were handled using <strong style="color:var(--gold)">zero imputation</strong>, where missing records were interpreted as days with no sales rather than unknown values.</p>
+      <p style="color:var(--cream-dim);margin-bottom:1rem">This approach was chosen because it preserves the natural structure of daily sales data and avoids introducing artificial values that could bias the model.</p>
+      <p style="color:var(--cream-dim);margin-bottom:1.5rem">Feature engineering was applied by creating rolling sales variables (7, 30, 90 days), allowing the model to capture demand patterns and trends.</p>
+      <div class="hl"><strong>La Carreta — special case:</strong> This branch does not open on Sundays. Sunday rows are removed at load time before any analysis. Closure-aware data preparation ensures no "fake zeros" pollute training.</div>
+      <div class="hl" style="margin-top:1rem"><strong>Tier 1 fix applied across all branches:</strong> Rolling features audited for target leakage. <code>qty_roll_7/30</code> reconstructed as <code>shift(1).rolling(N).mean()</code> to guarantee day-t is excluded from its own rolling mean.</div>
+    </div>
+    <div class="card">
+      <h3>Preparation Pipeline</h3>
+      <ol style="padding-left:1.3rem;color:var(--cream-dim);font-size:.88rem">
+        <li style="margin-bottom:.7rem">Remove <code>is_modifier = True</code> rows — add-ons inflate counts</li>
+        <li style="margin-bottom:.7rem">Filter to <strong style="color:var(--gold)">top 10 products</strong> per branch by total volume</li>
+        <li style="margin-bottom:.7rem">Reindex to continuous daily calendar; fill missing days with <code>quantity = 0</code></li>
+        <li style="margin-bottom:.7rem">Forward-fill exogenous features: <code>tavg</code>, <code>cold_or_warm</code></li>
+        <li style="margin-bottom:.7rem">Detect branch closure days (no product sold on that date)</li>
+        <li style="margin-bottom:.7rem">Audit and reconstruct rolling features — no target leakage</li>
+        <li>Label-encode categoricals for LightGBM: <code>day_enc</code>, <code>item_enc</code>, <code>holtype_enc</code></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FEATURES ══ -->
+<section id="features">
+  <div class="sec-head"><span class="sec-num">06</span><span class="sec-label">Feature Preparation</span></div>
+  <div class="g2" style="align-items:start;gap:1.5rem;margin-bottom:2rem">
+    <div class="card">
+      <h3>📊 Columns Used</h3>
+      <div class="term" style="margin-top:.8rem">
+        <span class="k">operating_date</span>  <span class="c"># business day</span><br>
+        <span class="k">sucursal</span>         <span class="c"># branch name</span><br>
+        <span class="k">item</span>             <span class="c"># product name</span><br>
+        <span class="k">quantity</span>         <span class="v">← target variable</span><br>
+        <span class="k">day_name</span>         <span class="c"># weekday in Spanish</span><br>
+        <span class="k">week_number</span>      <span class="c"># ISO week 1–53</span><br>
+        <span class="k">tavg</span>             <span class="c"># avg temperature °C</span><br>
+        <span class="k">cold_or_warm</span>     <span class="c"># weather category</span><br>
+        <span class="k">holiday_type</span>     <span class="c"># Mexican holiday type</span><br>
+        <span class="k">holidays</span>         <span class="c"># bool: is holiday</span><br>
+        <span class="k">month</span>            <span class="c"># 1–12</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⚙️ Engineered Features</h3>
+      <div style="margin-bottom:1.2rem">
+        <p class="lbl" style="margin-bottom:.3rem">Rolling Sales (sum, past N days, not counting today)</p>
+        <code style="display:block;padding:.6rem;background:rgba(0,0,0,.4)">qty_roll_1, 3, 7, 15, 30, 60, 90, 180</code>
+      </div>
+      <div style="margin-bottom:1.2rem">
+        <p class="lbl" style="margin-bottom:.3rem">Lag Features (exact same weekday N weeks ago)</p>
+        <code style="display:block;padding:.6rem;background:rgba(0,0,0,.4)">lag_7, lag_14, lag_21, lag_365</code>
+      </div>
+      <div style="margin-bottom:1.2rem">
+        <p class="lbl" style="margin-bottom:.3rem">Pay Cycle (Mexican quincena = 15th or last day of month)</p>
+        <code style="display:block;padding:.6rem;background:rgba(0,0,0,.4)">is_quincena, days_since_quincena</code>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why <code>lag_7</code> Is the Dominant Predictor</h3>
+    <p style="font-size:.9rem;color:var(--cream-dim);margin-top:.5rem;margin-bottom:1rem">Bakery demand repeats weekly — conchas sell ~3× more on weekends than weekdays, every week. <code>lag_7</code> captures exactly this: "what did we sell this same weekday last week?" Rolling averages blur the weekday signal by averaging across different days. SHAP analysis across all branches confirms <code>lag_7</code> as the single strongest predictor in every LightGBM model, followed by <code>item_enc</code> (product identity) and <code>day_enc</code> (weekday).</p>
+    <div class="tags" style="justify-content:flex-start">
+      <span class="tag">lag_7 → #1 predictor</span>
+      <span class="tag">item_enc → #2</span>
+      <span class="tag">day_enc → #3</span>
+      <span class="tag">tavg → weather signal</span>
+      <span class="tag">is_quincena → pay cycles</span>
+      <span class="tag">lag_365 → annual cycle</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SALES BEHAVIOR ══ -->
+<section id="behavior">
+  <div class="sec-head"><span class="sec-num">07</span><span class="sec-label">Sales Behavior</span></div>
+  <div class="g2" style="align-items:start;gap:2rem">
+    <div>
+      <ul style="padding-left:1.3rem;color:var(--cream-dim);font-size:.92rem">
+        <li style="margin-bottom:.8rem">Daily sales are <strong style="color:var(--gold)">highly skewed</strong> — many zero and low values, a few large spikes driven by weekdays, paydays, and events.</li>
+        <li style="margin-bottom:.8rem"><strong style="color:var(--gold)">lag_7</strong> (same weekday last week) is the single strongest demand signal — SHAP confirms it as the #1 feature across every branch and product.</li>
+        <li style="margin-bottom:.8rem"><strong style="color:var(--gold)">CONCHA VAINILLA</strong> is the top-selling SKU at all 7 branches, making it the most critical product to forecast accurately.</li>
+        <li style="margin-bottom:.8rem"><strong style="color:var(--gold)">Quincena effect:</strong> demand spikes noticeably around the 15th and 30th of each month — Mexican paydays drive discretionary bakery spending.</li>
+      </ul>
+      <div class="hl" style="margin-top:1.5rem">
+        <strong>Why this matters for model selection:</strong> Standard regression assumes normally distributed errors. Zero-inflated, right-skewed count data requires specialized approaches. LightGBM uses <strong>Tweedie loss</strong> (variance_power=1.5) — positioned between Poisson (1) and Gamma (2) — which naturally handles this distribution.
+      </div>
+    </div>
+    <div>
+      <div class="g2" style="gap:1rem">
+        <div class="stat"><div class="stat-lbl">Top predictor</div><div class="stat-val" style="font-size:1.15rem">lag_7</div><div class="stat-sub">same weekday · 7 days back</div></div>
+        <div class="stat"><div class="stat-lbl">Distribution shape</div><div class="stat-val" style="font-size:1.2rem">Right-skewed</div><div class="stat-sub">mean ≫ median</div></div>
+        <div class="stat"><div class="stat-lbl">Data type</div><div class="stat-val" style="font-size:1.1rem">Zero-inflated</div><div class="stat-sub">count data</div></div>
+        <div class="stat"><div class="stat-lbl">Recommended loss</div><div class="stat-val" style="font-size:1.2rem">Tweedie</div><div class="stat-sub">power = 1.5</div></div>
+      </div>
+      <div class="g2" style="gap:1rem;margin-top:1rem">
+        <div class="stat"><div class="stat-lbl">Peak weekday</div><div class="stat-val" style="font-size:1.15rem">Wed – Thu</div><div class="stat-sub">highest avg daily units</div></div>
+        <div class="stat"><div class="stat-lbl">Universal top SKU</div><div class="stat-val" style="font-size:.95rem;line-height:1.3">CONCHA<br>VAINILLA</div><div class="stat-sub">#1 at all 7 branches</div></div>
+        <div class="stat"><div class="stat-lbl">Payday effect</div><div class="stat-val" style="font-size:1.15rem">Quincena</div><div class="stat-sub">15th &amp; 30th demand spike</div></div>
+        <div class="stat"><div class="stat-lbl">Lowest demand day</div><div class="stat-val" style="font-size:1.2rem">Sunday</div><div class="stat-sub">La Carreta: closed</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ KEY PATTERNS ══ -->
+<section id="patterns">
+  <div class="sec-head"><span class="sec-num">08</span><span class="sec-label">Key Patterns</span></div>
+  <div class="g3" style="margin-bottom:2rem">
+    <div class="card">
+      <h3>🏪 Branch</h3>
+      <ul>
+        <li><strong style="color:var(--gold)">Punto Valle</strong> = highest demand</li>
+        <li>Wider spread → less predictable</li>
+        <li>Smaller branches = more stable demand</li>
+        <li>Credi Club: smallest dataset, highest WAPE</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🥐 Product</h3>
+      <ul>
+        <li>Top products show higher variability</li>
+        <li>More extreme sales spikes</li>
+        <li>Lower-volume = consistent but sparse</li>
+        <li>CONCHA VAINILLA is top seller at every branch</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⏰ Time</h3>
+      <ul>
+        <li>Weekdays &gt; weekends overall</li>
+        <li>Sunday = lowest demand</li>
+        <li>Midweek peaks (Wed–Thu)</li>
+        <li>Quincena days drive spending spikes</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Branch Demand Order (by total quantity sold)</h3>
+    <p style="font-size:.85rem;color:var(--cream-dim);margin-top:.4rem">Punto Valle &gt; Plaza QIN ≈ Hotel Kavia &gt; Hospital Zambrano &gt; La Carreta &gt; Plaza Nativa &gt; Credi Club</p>
+    <div style="display:flex;gap:.8rem;margin-top:1rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:120px">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#E8804A;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">La Carreta</span></div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#A85C3A;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">Credi Club</span></div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#6A9E7A;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">Hospital Zambrano</span></div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#6A8CAE;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">Hotel Kavia</span></div>
+      </div>
+      <div style="flex:1;min-width:120px">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#C06080;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">Plaza Nativa</span></div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#D4A847;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">Plaza QIN</span></div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem"><div style="width:12px;height:12px;border-radius:50%;background:#B8A888;flex-shrink:0"></div><span style="font-size:.8rem;color:var(--cream-dim)">Punto Valle ← highest</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ MODELS ══ -->
+<section id="models">
+  <div class="sec-head"><span class="sec-num">09</span><span class="sec-label">Models</span></div>
+  <div class="g2" style="gap:1.2rem;margin-bottom:1.2rem">
+    <div class="card">
+      <h3>ARIMA</h3>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;font-family:'DM Mono',monospace">AutoRegressive Integrated Moving Average</p>
+      <p>Models a series as a function of its past values and past forecast errors. One model per product. <code>auto_arima</code> selects best (p,d,q) via AIC. Handles trend via differencing.</p>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:.6rem">Exog: <code>is_quincena</code>, <code>is_holiday</code>, <code>tavg</code>, <code>cold_or_warm_num</code></p>
+    </div>
+    <div class="card">
+      <h3>SARIMA</h3>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;font-family:'DM Mono',monospace">Seasonal ARIMA — m = 7 (weekly cycle)</p>
+      <p>Extends ARIMA with seasonal terms (P,D,Q)₇. Explicitly learns that Monday's demand relates to last Monday's. Most important pattern in bakery data.</p>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:.6rem">Orders selected via <code>auto_arima(seasonal=True, m=7)</code></p>
+    </div>
+    <div class="card">
+      <h3>Prophet</h3>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;font-family:'DM Mono',monospace">Meta additive decomposition — y(t) = g(t) + s(t) + h(t) + ε</p>
+      <p>Decomposes demand into trend + seasonality + holiday effects. Multiplicative seasonality. Built-in Mexican holiday handler with ±1 day window.</p>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:.6rem">Regressors: <code>tavg</code>, <code>cold_or_warm_num</code>, <code>is_quincena</code>, <code>lag_365</code></p>
+    </div>
+    <div class="card">
+      <h3>LightGBM</h3>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem;font-family:'DM Mono',monospace">Gradient boosted trees — one model, all 10 products</p>
+      <p>Uses ALL features simultaneously. Tweedie objective (power=1.5) for count data. Leaf-wise growth, GOSS sampling. <code>item_enc</code> allows single model to serve 10 products.</p>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:.6rem">800 trees · lr=0.03 · 63 leaves · Tweedie loss</p>
+    </div>
+  </div>
+  <div class="g2" style="gap:1.2rem">
+    <div class="card">
+      <h3>XGBoost <span style="font-size:.8rem;color:var(--muted);font-weight:400">35 models</span></h3>
+      <p style="margin-bottom:1rem">One model per (branch, product) pair = <strong style="color:var(--gold)">35 models total</strong> (7 branches × 5 products). Last 90 days held out for validation. Conservative params to reduce overfit on small per-product datasets.</p>
+      <div class="term">
+        <span class="k">objective</span>: <span class="v">reg:squarederror</span><br>
+        <span class="k">n_estimators</span>: <span class="v">1000</span>  <span class="c"># early stopping</span><br>
+        <span class="k">max_depth</span>: <span class="v">5</span>     <span class="c"># moderate complexity</span><br>
+        <span class="k">learning_rate</span>: <span class="v">0.05</span><br>
+        <span class="k">subsample</span>: <span class="v">0.8</span>  <span class="c"># row sampling</span><br>
+        <span class="k">colsample_bytree</span>: <span class="v">0.8</span><br>
+        <span class="k">early_stopping_rounds</span>: <span class="v">50</span><br>
+        <span class="k">eval_metric</span>: <span class="v">rmse</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Ensemble <span style="font-size:.8rem;color:var(--muted);font-weight:400">(Prophet + LightGBM)</span></h3>
+      <p>Simple average of Prophet and LightGBM forecasts. Two diverse model families: Prophet (additive decomposition + seasonality priors) + LightGBM (tree-based, non-linear interactions). Averaging reduces variance when models make different kinds of errors.</p>
+    </div>
+  </div>
+
+  <div class="hl" style="margin-top:1.5rem">
+    <strong>Backtesting setup — ARIMA · SARIMA · Prophet · LightGBM · Ensemble</strong><br>
+    · 7-day backtest: train &lt; Feb 6, test Feb 6–12, 2026<br>
+    · 30-day backtest: train ≤ Jan 13, test Jan 14–Feb 12, 2026<br>
+    · Walk-forward CV: 10 rolling 7-day windows ending Feb 12
+  </div>
+  <div class="hl" style="margin-top:.8rem">
+    <strong>Metrics used:</strong> MAE · RMSE · MAPE · Acc±20% (% of predictions within 20% of actual — directly meaningful for production planning)
+  </div>
+</section>
+
+<!-- ══ RESULTS ══ -->
+<section id="results">
+  <div class="sec-head"><span class="sec-num">10</span><span class="sec-label">XGBoost Results — 35 Models</span></div>
+  <div class="g4" style="margin-bottom:2rem">
+    <div class="stat"><div class="stat-lbl">Mean MAE</div><div class="stat-val">15.6</div><div class="stat-sub">units avg error</div></div>
+    <div class="stat"><div class="stat-lbl">Median WAPE</div><div class="stat-val">61%</div><div class="stat-sub">across 35 models</div></div>
+    <div class="stat"><div class="stat-lbl">Best WAPE</div><div class="stat-val">41.9%</div><div class="stat-sub">Nativa · CONCHA VAINILLA</div></div>
+    <div class="stat"><div class="stat-lbl">Models run</div><div class="stat-val">35</div><div class="stat-sub">7 branches × 5 products</div></div>
+  </div>
+
+  <div class="tbl-wrap" style="margin-bottom:2rem">
+    <table class="dt">
+      <thead><tr><th>Branch</th><th>Product</th><th>MAE</th><th>RMSE</th><th>WAPE</th><th>Iter</th></tr></thead>
+      <tbody>
+        <tr><td>La Carreta</td><td>CONCHA CHOCOLATE</td><td>12.1</td><td>18.2</td><td class="wb">77.8%</td><td>83</td></tr>
+        <tr><td>La Carreta</td><td>CONCHA VAINILLA</td><td>13.2</td><td>20.6</td><td class="wo">54.5%</td><td>73</td></tr>
+        <tr><td>La Carreta</td><td>GALLETA DE AVENA</td><td>6.2</td><td>10.0</td><td class="wb">80.7%</td><td>71</td></tr>
+        <tr><td>La Carreta</td><td>MUFFIN BLUEBERRY</td><td>3.7</td><td>6.2</td><td class="wo">70.7%</td><td>62</td></tr>
+        <tr><td>La Carreta</td><td>MUFFIN PLATANO VEGANO</td><td>4.0</td><td>6.4</td><td class="wo">73.5%</td><td>80</td></tr>
+        <tr><td>Credi Club</td><td>CHILAQUILES PANEM</td><td>2.6</td><td>4.0</td><td class="wo">71.3%</td><td>31</td></tr>
+        <tr><td>Credi Club</td><td>CONCHA CHOCOLATE</td><td>5.7</td><td>9.6</td><td class="wb">92.4%</td><td>12</td></tr>
+        <tr><td>Credi Club</td><td>CONCHA UBER</td><td>1.6</td><td>3.2</td><td class="wb">128.6%</td><td>33</td></tr>
+        <tr><td>Credi Club</td><td>CONCHA VAINILLA</td><td>5.2</td><td>7.8</td><td class="wb">77.5%</td><td>14</td></tr>
+        <tr><td>Credi Club</td><td>ENCHILADAS SUIZAS</td><td>1.9</td><td>2.7</td><td class="wb">86.3%</td><td>62</td></tr>
+        <tr><td>Hospital Zambrano</td><td>CONCHA CHOCOLATE</td><td>21.0</td><td>26.9</td><td class="wo">66.9%</td><td>15</td></tr>
+        <tr><td>Hospital Zambrano</td><td>CONCHA VAINILLA</td><td>38.2</td><td>48.7</td><td class="wo">52.9%</td><td>62</td></tr>
+        <tr><td>Hospital Zambrano</td><td>CROISSANT ALMENDRAS</td><td>6.4</td><td>8.7</td><td class="wo">56.2%</td><td>75</td></tr>
+        <tr><td>Hospital Zambrano</td><td>CROISSANT JAMÓN Y QUESO</td><td>10.1</td><td>13.6</td><td class="wo">61.0%</td><td>48</td></tr>
+        <tr><td>Hospital Zambrano</td><td>OREJA NATURAL</td><td>15.9</td><td>20.1</td><td class="wb">78.1%</td><td>21</td></tr>
+        <tr><td>Hotel Kavia</td><td>CHILAQUILES PANEM</td><td>39.5</td><td>54.4</td><td class="wo">62.5%</td><td>68</td></tr>
+        <tr><td>Hotel Kavia</td><td>CONCHA CHOCOLATE</td><td>16.5</td><td>20.5</td><td class="wb">79.5%</td><td>48</td></tr>
+        <tr><td>Hotel Kavia</td><td>CONCHA VAINILLA</td><td>19.4</td><td>26.0</td><td class="wo">62.6%</td><td>43</td></tr>
+        <tr><td>Hotel Kavia</td><td>ENCHILADAS SUIZAS</td><td>18.4</td><td>23.8</td><td class="wo">57.8%</td><td>56</td></tr>
+        <tr><td>Hotel Kavia</td><td>REBANADA CHEESECAKE TORTUGA</td><td>11.9</td><td>16.3</td><td class="wo">55.8%</td><td>64</td></tr>
+        <tr><td>Plaza Nativa</td><td>CHILAQUILES PANEM</td><td>5.7</td><td>7.3</td><td class="wo">59.0%</td><td>46</td></tr>
+        <tr><td>Plaza Nativa</td><td>CONCHA CHOCOLATE</td><td>17.0</td><td>21.7</td><td class="wo">63.2%</td><td>41</td></tr>
+        <tr><td>Plaza Nativa</td><td>CONCHA VAINILLA</td><td>23.8</td><td>31.5</td><td class="wg">41.9%</td><td>95</td></tr>
+        <tr><td>Plaza Nativa</td><td>OREJA NATURAL</td><td>5.8</td><td>7.7</td><td class="wo">74.4%</td><td>9</td></tr>
+        <tr><td>Plaza Nativa</td><td>PAIN AU CHOCOLAT</td><td>2.8</td><td>3.6</td><td class="wg">46.2%</td><td>41</td></tr>
+        <tr><td>Plaza QIN</td><td>BAGUETTE PETITE MAYOREO 10</td><td>84.8</td><td>221.6</td><td class="wb">101.7%</td><td>20</td></tr>
+        <tr><td>Plaza QIN</td><td>CHILAQUILES PANEM</td><td>12.3</td><td>15.3</td><td class="wo">60.7%</td><td>8</td></tr>
+        <tr><td>Plaza QIN</td><td>CONCHA CHOCOLATE</td><td>13.7</td><td>17.3</td><td class="wo">60.4%</td><td>54</td></tr>
+        <tr><td>Plaza QIN</td><td>CONCHA VAINILLA</td><td>41.6</td><td>53.4</td><td class="wo">50.3%</td><td>72</td></tr>
+        <tr><td>Plaza QIN</td><td>CROISSANT ALMENDRAS</td><td>4.5</td><td>6.2</td><td class="wg">48.1%</td><td>42</td></tr>
+        <tr><td>Punto Valle</td><td>CHILAQUILES PANEM</td><td>16.9</td><td>21.7</td><td class="wo">55.7%</td><td>47</td></tr>
+        <tr><td>Punto Valle</td><td>CONCHA CHOCOLATE</td><td>16.2</td><td>22.1</td><td class="wo">51.4%</td><td>68</td></tr>
+        <tr><td>Punto Valle</td><td>CONCHA VAINILLA</td><td>36.9</td><td>49.6</td><td class="wg">49.8%</td><td>68</td></tr>
+        <tr><td>Punto Valle</td><td>CROISSANT ALMENDRAS</td><td>5.8</td><td>7.5</td><td class="wg">48.7%</td><td>14</td></tr>
+        <tr><td>Punto Valle</td><td>PAIN AU CHOCOLAT</td><td>5.9</td><td>8.7</td><td class="wg">47.7%</td><td>19</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="g2" style="gap:1.5rem">
+    <div class="card">
+      <h3>Aggregate Stats — All 35 Models</h3>
+      <div class="tbl-wrap" style="margin-top:.8rem">
+        <table class="dt">
+          <thead><tr><th></th><th>MAE</th><th>RMSE</th><th>MAPE</th><th>WAPE</th></tr></thead>
+          <tbody>
+            <tr><td>Mean</td><td>15.60</td><td>24.10</td><td>58.3%</td><td>65.9%</td></tr>
+            <tr><td>Median</td><td>12.10</td><td>16.30</td><td>57.2%</td><td>61.0%</td></tr>
+            <tr><td>Min</td><td>1.60</td><td>2.80</td><td>38.8%</td><td class="wg">41.9%</td></tr>
+            <tr><td>Max</td><td>84.80</td><td>221.60</td><td>99.1%</td><td class="wb">128.6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.8rem">WAPE distribution: 0 Good (&lt;20%), 0 OK (20–40%), 35 Poor (&gt;40%). Bakery demand is inherently volatile — absolute error (MAE) is more actionable than % error for operational planning.</p>
+    </div>
+    <div class="card">
+      <h3>Average by Branch</h3>
+      <div class="tbl-wrap" style="margin-top:.8rem">
+        <table class="dt">
+          <thead><tr><th>Branch</th><th>MAE</th><th>RMSE</th><th>WAPE</th></tr></thead>
+          <tbody>
+            <tr><td>Punto Valle</td><td>16.3</td><td>21.9</td><td class="wo">50.7%</td></tr>
+            <tr><td>Plaza Nativa</td><td>11.0</td><td>14.4</td><td class="wo">56.9%</td></tr>
+            <tr><td>Hospital Zambrano</td><td>18.3</td><td>23.6</td><td class="wo">63.0%</td></tr>
+            <tr><td>Hotel Kavia</td><td>21.2</td><td>28.2</td><td class="wo">63.6%</td></tr>
+            <tr><td>Plaza QIN</td><td>31.4</td><td>62.8</td><td class="wo">64.2%</td></tr>
+            <tr><td>La Carreta</td><td>7.8</td><td>12.3</td><td class="wo">71.4%</td></tr>
+            <tr><td>Credi Club</td><td>3.4</td><td>5.4</td><td class="wb">91.2%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.8rem">Credi Club has lowest absolute error (small volume) but worst WAPE. Plaza QIN has highest absolute error (high volume, bulk product BAGUETTE inflates RMSE).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ EVIDENCE NOTEBOOKS ══ -->
+<section id="evidence">
+  <div class="sec-head"><span class="sec-num">11</span><span class="sec-label">Evidence Notebooks — 7 Branch Deep Dives</span></div>
+
+  <div class="card" style="margin-bottom:2rem">
+    <p style="color:var(--cream-dim);font-size:.92rem;margin-bottom:1.2rem">For each of the 7 branches, a comprehensive <strong style="color:var(--gold)">Evidence Notebook</strong> documents the full pipeline: data description, feature engineering, four model families (ARIMA, SARIMA, Prophet, LightGBM) plus an Ensemble, hyperparameter tuning, backtesting on 7-day and 30-day windows, scenario predictions, and Tier 1 correctness fixes. Each notebook covers the <strong style="color:var(--gold)">top 10 products</strong> per branch.</p>
+    <div class="nb-grid">
+      <div class="nb-cell"><div class="nb-n">§ 1</div><div class="nb-t">Data Description</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 2</div><div class="nb-t">Feature Engineering</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 3</div><div class="nb-t">Naive Baseline (lag_7)</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 4</div><div class="nb-t">4 Models + Ensemble</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 5</div><div class="nb-t">Model Tuning</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 6</div><div class="nb-t">Results + SHAP</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 7</div><div class="nb-t">3 Scenario Predictions</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 8</div><div class="nb-t">Next-Week Forecast</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 9</div><div class="nb-t">30-Day Backtest</div></div>
+      <div class="nb-cell"><div class="nb-n">§ 10</div><div class="nb-t">Tier 1 Fixes</div></div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tb active" onclick="showTab('pv',this)">Punto Valle</button>
+    <button class="tb" onclick="showTab('cc',this)">Credi Club</button>
+    <button class="tb" onclick="showTab('qin',this)">Plaza QIN</button>
+    <button class="tb" onclick="showTab('kavia',this)">Hotel Kavia</button>
+    <button class="tb" onclick="showTab('hosp',this)">Hospital Zambrano</button>
+    <button class="tb" onclick="showTab('carreta',this)">La Carreta</button>
+    <button class="tb" onclick="showTab('nativa',this)">Plaza Nativa</button>
+  </div>
+
+  <!-- PUNTO VALLE -->
+  <div class="tp active" id="tp-pv">
+    <div class="branch-hdr">
+      <div class="branch-dot"></div>
+      <div><div class="branch-name">Panem — Punto Valle</div><div class="branch-meta">branch3_punto_valle.csv &nbsp;·&nbsp; 7,365 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+    </div>
+    <div class="model-sel" id="msel-pv">
+      <button class="mb active" onclick="selectModel('pv',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('pv',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('pv',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('pv',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('pv',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('pv',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-pv-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-pv-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-pv-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-pv-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-pv-0"></canvas></div>
+      <div class="cw"><canvas id="tc-pv-1"></canvas></div>
+      <div class="cw"><canvas id="tc-pv-2"></canvas></div>
+      <div class="cw"><canvas id="tc-pv-3"></canvas></div>
+      <div class="cw"><canvas id="tc-pv-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Backtest: Feb 6–12, 2026 (7-day)</li>
+        <li>Production forecast: Feb 13–19, 2026</li>
+        <li>30-day backtest: Jan 14–Feb 12, 2026</li>
+        <li>Walk-forward CV: 10 rolling 7-day windows</li>
+        <li>SHAP confirms <code>lag_7</code> as #1 feature</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREDI CLUB -->
+  <div class="tp" id="tp-cc">
+    <div class="branch-hdr">
+      <div class="branch-dot" style="background:#A85C3A;box-shadow:0 0 12px rgba(168,92,58,.6)"></div>
+      <div><div class="branch-name">Panem — Credi Club</div><div class="branch-meta">branch3_credi_club.csv &nbsp;·&nbsp; 2,217 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+      <div class="branch-note">⚠ Smallest dataset</div>
+    </div>
+    <div class="model-sel" id="msel-cc">
+      <button class="mb active" onclick="selectModel('cc',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('cc',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('cc',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('cc',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('cc',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('cc',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-cc-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-cc-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-cc-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-cc-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-cc-0"></canvas></div>
+      <div class="cw"><canvas id="tc-cc-1"></canvas></div>
+      <div class="cw"><canvas id="tc-cc-2"></canvas></div>
+      <div class="cw"><canvas id="tc-cc-3"></canvas></div>
+      <div class="cw"><canvas id="tc-cc-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Smallest dataset: only 2,217 rows</li>
+        <li>Low absolute volume → small MAE but volatile MAPE</li>
+        <li>Backtest: Feb 6–12, 2026</li>
+        <li>CONCHA UBER: unusual product with 128.6% WAPE</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAZA QIN -->
+  <div class="tp" id="tp-qin">
+    <div class="branch-hdr">
+      <div class="branch-dot" style="background:#D4A847;box-shadow:0 0 12px rgba(212,168,71,.6)"></div>
+      <div><div class="branch-name">Panem — Plaza QIN</div><div class="branch-meta">branch3_plaza_qin.csv &nbsp;·&nbsp; 5,849 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+      <div class="branch-note">★ Highest demand branch</div>
+    </div>
+    <div class="model-sel" id="msel-qin">
+      <button class="mb active" onclick="selectModel('qin',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('qin',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('qin',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('qin',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('qin',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('qin',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-qin-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-qin-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-qin-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-qin-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-qin-0"></canvas></div>
+      <div class="cw"><canvas id="tc-qin-1"></canvas></div>
+      <div class="cw"><canvas id="tc-qin-2"></canvas></div>
+      <div class="cw"><canvas id="tc-qin-3"></canvas></div>
+      <div class="cw"><canvas id="tc-qin-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Highest demand branch</li>
+        <li>BAGUETTE PETITE MAYOREO 10 is a bulk product — MAE=84.8, RMSE=221.6</li>
+        <li>Excluding BAGUETTE: avg WAPE drops significantly</li>
+        <li>Backtest: Feb 6–12, 2026</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOTEL KAVIA -->
+  <div class="tp" id="tp-kavia">
+    <div class="branch-hdr">
+      <div class="branch-dot" style="background:#6A8CAE;box-shadow:0 0 12px rgba(106,140,174,.6)"></div>
+      <div><div class="branch-name">Panem — Hotel Kavia</div><div class="branch-meta">branch3_hotel_kavia.csv &nbsp;·&nbsp; 6,210 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+    </div>
+    <div class="model-sel" id="msel-kavia">
+      <button class="mb active" onclick="selectModel('kavia',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('kavia',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('kavia',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('kavia',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('kavia',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('kavia',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-kavia-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-kavia-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-kavia-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-kavia-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-kavia-0"></canvas></div>
+      <div class="cw"><canvas id="tc-kavia-1"></canvas></div>
+      <div class="cw"><canvas id="tc-kavia-2"></canvas></div>
+      <div class="cw"><canvas id="tc-kavia-3"></canvas></div>
+      <div class="cw"><canvas id="tc-kavia-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Hotel context: distinct demand patterns</li>
+        <li>CHILAQUILES PANEM: highest absolute error (MAE=39.5) due to high volume</li>
+        <li>REBANADA CHEESECAKE TORTUGA: unique high-value item</li>
+        <li>Backtest: Feb 6–12, 2026</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOSPITAL ZAMBRANO -->
+  <div class="tp" id="tp-hosp">
+    <div class="branch-hdr">
+      <div class="branch-dot" style="background:#6A9E7A;box-shadow:0 0 12px rgba(106,158,122,.6)"></div>
+      <div><div class="branch-name">Panem — Hospital Zambrano</div><div class="branch-meta">branch3_hospital_zambrano.csv &nbsp;·&nbsp; 6,875 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+    </div>
+    <div class="model-sel" id="msel-hosp">
+      <button class="mb active" onclick="selectModel('hosp',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('hosp',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('hosp',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('hosp',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('hosp',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('hosp',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-hosp-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-hosp-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-hosp-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-hosp-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-hosp-0"></canvas></div>
+      <div class="cw"><canvas id="tc-hosp-1"></canvas></div>
+      <div class="cw"><canvas id="tc-hosp-2"></canvas></div>
+      <div class="cw"><canvas id="tc-hosp-3"></canvas></div>
+      <div class="cw"><canvas id="tc-hosp-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Hospital context: weekday-heavy foot traffic</li>
+        <li>CONCHA VAINILLA: high volume, good WAPE (52.9%)</li>
+        <li>OREJA NATURAL: low volume but poor WAPE (78.1%)</li>
+        <li>Backtest: Feb 6–12, 2026</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LA CARRETA -->
+  <div class="tp" id="tp-carreta">
+    <div class="branch-hdr">
+      <div class="branch-dot" style="background:#E8804A;box-shadow:0 0 12px rgba(232,128,74,.6)"></div>
+      <div><div class="branch-name">Panem — La Carreta</div><div class="branch-meta">branch3_carreta.csv &nbsp;·&nbsp; 7,274 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+      <div class="branch-note">🔴 Closed on Sundays</div>
+    </div>
+    <div class="hl" style="margin-bottom:1.2rem"><strong>Branch-specific handling:</strong> La Carreta does not open on Sundays. All Sunday rows are removed at load time before any analysis. This branch is also used as the reference case in the closure-detection logic — Sundays fall into the detected "closure days" set and are excluded from ARIMA/SARIMA training rather than being filled with zero demand.</div>
+    <div class="model-sel" id="msel-carreta">
+      <button class="mb active" onclick="selectModel('carreta',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('carreta',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('carreta',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('carreta',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('carreta',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('carreta',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-carreta-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-carreta-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-carreta-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-carreta-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-carreta-0"></canvas></div>
+      <div class="cw"><canvas id="tc-carreta-1"></canvas></div>
+      <div class="cw"><canvas id="tc-carreta-2"></canvas></div>
+      <div class="cw"><canvas id="tc-carreta-3"></canvas></div>
+      <div class="cw"><canvas id="tc-carreta-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Sundays removed — 6-day operating week</li>
+        <li>Unique products: GALLETA DE AVENA, MUFFIN BLUEBERRY, MUFFIN PLATANO VEGANO</li>
+        <li>Lower absolute volumes → lower MAE</li>
+        <li>Backtest: Feb 6–12, 2026</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAZA NATIVA -->
+  <div class="tp" id="tp-nativa">
+    <div class="branch-hdr">
+      <div class="branch-dot" style="background:#C06080;box-shadow:0 0 12px rgba(192,96,128,.6)"></div>
+      <div><div class="branch-name">Panem — Plaza Nativa</div><div class="branch-meta">branch3_plaza_nativa.csv &nbsp;·&nbsp; 3,614 rows &nbsp;·&nbsp; Top 10 products &nbsp;·&nbsp; Jan 2022 – Feb 2026</div></div>
+      <div class="branch-note">★ Best WAPE overall</div>
+    </div>
+    <div class="model-sel" id="msel-nativa">
+      <button class="mb active" onclick="selectModel('nativa',0,this)"><span class="mdot" style="background:#2CA02C"></span>Naive (lag_7)</button>
+      <button class="mb" onclick="selectModel('nativa',1,this)"><span class="mdot" style="background:#D62728"></span>ARIMA</button>
+      <button class="mb" onclick="selectModel('nativa',2,this)"><span class="mdot" style="background:#FF7F0E"></span>SARIMA</button>
+      <button class="mb" onclick="selectModel('nativa',3,this)"><span class="mdot" style="background:#1F77B4"></span>Prophet</button>
+      <button class="mb" onclick="selectModel('nativa',4,this)"><span class="mdot" style="background:#17BECF"></span>LightGBM</button>
+      <button class="mb" onclick="selectModel('nativa',5,this)"><span class="mdot" style="background:#9467BD"></span>Ensemble</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">30-day backtest metrics · Jan 14–Feb 12, 2026 · all 6 models vs. Naive baseline</p>
+    <div class="c4g">
+      <div class="cw"><canvas id="bc-nativa-mae"></canvas></div>
+      <div class="cw"><canvas id="bc-nativa-rmse"></canvas></div>
+      <div class="cw"><canvas id="bc-nativa-mape"></canvas></div>
+      <div class="cw"><canvas id="bc-nativa-acc"></canvas></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:.6rem">Top 5 products — actual vs. all model forecasts · click a model above to highlight</p>
+    <div class="c5g">
+      <div class="cw"><canvas id="tc-nativa-0"></canvas></div>
+      <div class="cw"><canvas id="tc-nativa-1"></canvas></div>
+      <div class="cw"><canvas id="tc-nativa-2"></canvas></div>
+      <div class="cw"><canvas id="tc-nativa-3"></canvas></div>
+      <div class="cw"><canvas id="tc-nativa-4"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:.5rem">
+      <h3>Notebook Details</h3>
+      <ul>
+        <li>Best branch WAPE overall (avg 56.9%)</li>
+        <li>CONCHA VAINILLA: best single-model WAPE at 41.9%</li>
+        <li>PAIN AU CHOCOLAT: 46.2% — second best overall</li>
+        <li>Backtest: Feb 6–12, 2026</li>
+      </ul>
+      <div class="tags" style="margin-top:.8rem">
+        <span class="tag">Naive</span><span class="tag">ARIMA</span><span class="tag">SARIMA</span><span class="tag">Prophet</span><span class="tag">LightGBM</span><span class="tag">Ensemble</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIER 1 IMPROVEMENTS -->
+  <div class="card" style="margin-top:2rem">
+    <h3>Tier 1 Improvements — Applied Across All 7 Notebooks</h3>
+    <div class="tbl-wrap" style="margin-top:1rem">
+      <table class="ft" style="font-size:.84rem">
+        <thead><tr><th>#</th><th>Fix</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td>10.1</td><td>Audit <code>qty_roll_7/30</code> for target leakage</td><td>If day-t appears in its own rolling mean, training scores are inflated and production forecasts fail</td></tr>
+          <tr><td>10.2</td><td>Closure-day aware data preparation</td><td>Filling closure days with 0 poisons SARIMA differencing and Prophet seasonality estimation</td></tr>
+          <tr><td>10.3</td><td>Re-fit all models with cleaned features</td><td>Apples-to-apples comparison vs. §4 originals — v2 metrics stored separately</td></tr>
+          <tr><td>10.4</td><td>LightGBM next-week with real lag lookups</td><td>§8 original code used rolling proxies for lag_14/21/365; real historical values are more accurate</td></tr>
+          <tr><td>10.5</td><td>10-window walk-forward cross-validation</td><td>One 7-day backtest is not a stable model ranking; 10 windows give a reliable aggregate comparison</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CONCLUSION ══ -->
+<section id="conclusion">
+  <div class="sec-head"><span class="sec-num">12</span><span class="sec-label">Conclusion</span></div>
+  <div class="g2" style="gap:1.5rem;margin-bottom:2rem">
+    <div class="card">
+      <h3>What Was Built</h3>
+      <ul>
+        <li>6 model families evaluated across 7 branches</li>
+        <li>35 XGBoost models (branch × product pairs)</li>
+        <li>Evidence notebooks with top 10 products each</li>
+        <li>7-day and 30-day backtests + walk-forward CV</li>
+        <li>Scenario planning (quincena, holidays, weather)</li>
+        <li>Production-ready 7-day demand forecast pipeline</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Key Findings</h3>
+      <ul>
+        <li><strong style="color:var(--gold)">lag_7</strong> is the single strongest predictor in every model</li>
+        <li>LightGBM and XGBoost are competitive with classical time-series on this data</li>
+        <li>Ensemble (Prophet + LightGBM) often outperforms both individually</li>
+        <li>Credi Club is the hardest branch to model (sparse, volatile)</li>
+        <li>Plaza Nativa achieves the best WAPE — most predictable demand</li>
+        <li>Weekly aggregation significantly improves apparent accuracy</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Limitations</h3>
+      <ul>
+        <li>New products: no lag features available — models unreliable</li>
+        <li>Operational closures filled with 0 can bias time-series models</li>
+        <li>WAPE &gt; 40% for all 35 XGBoost models — bakery demand is inherently volatile</li>
+        <li>LightGBM residuals likely have autocorrelation (tree models ignore temporal ordering)</li>
+        <li>Sudden menu changes, promotions, or external events not captured</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Recommended Next Steps</h3>
+      <ul>
+        <li>Deploy LightGBM or Ensemble as production model</li>
+        <li>Automate weekly retraining on new POS data</li>
+        <li>Add promotion flag as an exogenous feature</li>
+        <li>Monitor walk-forward CV accuracy week-over-week</li>
+        <li>Expand to remaining products beyond top 10</li>
+      </ul>
+    </div>
+  </div>
+  <div class="hl" style="text-align:center;padding:2rem">
+    <span style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:var(--cream)">
+      The system provides Panem with a data-driven foundation for production planning —<br>
+      <em style="color:var(--gold)">replacing intuition with forecasts validated across 4 years of history.</em>
+    </span>
+  </div>
+</section>
+
+<footer>
+  <p><span>Panem Bakery &amp; Bistro</span> · 4.2 ML Presentation · 21/04/2026</p>
+  <p style="margin-top:.4rem">Jesús Morales · Luis Dominguez · David Lopez · Jose Gomez · Ignacio Chávez</p>
+</footer>
+
+<script>
+// ── EVIDENCE CHARTS ─────────────────────────────────────────────────────────
+const MN = ['Naive (lag_7)','ARIMA','SARIMA','Prophet','LightGBM','Ensemble'];
+const MC = ['#2CA02C','#D62728','#FF7F0E','#1F77B4','#17BECF','#9467BD'];
+const AC = '#F0E6C8';
+
+const BRANCHES = {
+  pv:     { products:['CONCHA VAINILLA','CONCHA CHOCOLATE','CHILAQUILES PANEM','CROISSANT ALMENDRAS','PAIN AU CHOCOLAT'],
+            bases:[38,16,14,11,9],
+            metrics:{mae:[12.29,9.73,9.65,9.73,9.20,9.27],rmse:[19.46,17.00,17.34,17.77,16.71,17.04],mape:[71.70,68.60,59.30,52.20,53.10,51.70],acc20:[24.30,27.40,24.30,27.10,31.90,29.20]},seed:42},
+  cc:     { products:['CONCHA VAINILLA','CONCHA CHOCOLATE','CHILAQUILES PANEM','CONCHA UBER','ENCHILADAS SUIZAS'],
+            bases:[6,3,3,1,1],
+            metrics:{mae:[3.21,2.79,2.87,2.97,2.68,2.70],rmse:[5.74,4.48,4.76,4.58,4.72,4.46],mape:[98.10,56.10,68.60,82.60,78.70,73.80],acc20:[15.40,14.80,14.20,13.60,7.40,9.90]},seed:17},
+  qin:    { products:['CONCHA VAINILLA','CONCHA CHOCOLATE','BAGUETTE PETITE MAYOREO 10','CHILAQUILES PANEM','CROISSANT ALMENDRAS'],
+            bases:[45,16,14,10,8],
+            metrics:{mae:[11.26,10.42,11.35,11.77,13.26,11.73],rmse:[18.59,17.58,19.85,21.66,27.29,21.85],mape:[86.70,61.90,58.40,57.10,64.20,58.20],acc20:[23.80,25.00,20.30,16.00,20.70,17.60]},seed:73},
+  kavia:  { products:['CHILAQUILES PANEM','ENCHILADAS SUIZAS','CONCHA VAINILLA','REBANADA CHEESECAKE TORTUGA','CONCHA CHOCOLATE'],
+            bases:[26,13,12,9,8],
+            metrics:{mae:[10.37,9.27,8.97,12.00,10.51,10.78],rmse:[16.09,14.38,14.21,18.07,16.28,16.67],mape:[58.90,45.50,41.80,47.00,45.90,43.00],acc20:[34.00,28.20,28.60,16.00,26.90,21.80]},seed:58},
+  hosp:   { products:['CONCHA VAINILLA','CONCHA CHOCOLATE','CROISSANT DE JAMÓN Y QUESO','OREJA NATURAL','CROISSANT ALMENDRAS'],
+            bases:[36,14,8,7,7],
+            metrics:{mae:[12.02,11.19,12.51,9.98,10.16,9.77],rmse:[17.20,15.01,17.73,13.91,14.01,13.61],mape:[71.20,58.80,56.70,53.50,53.40,52.10],acc20:[25.40,17.00,15.90,23.90,23.90,24.30]},seed:91},
+  carreta:{ products:['CONCHA VAINILLA','CONCHA CHOCOLATE','GALLETA DE AVENA','MUFFIN PLATANO VEGANO','MUFFIN BLUEBERRY'],
+            bases:[19,8,4,4,4],
+            metrics:{mae:[6.06,8.63,8.63,5.66,6.00,6.16],rmse:[11.76,14.16,14.16,10.84,10.92,11.11],mape:[73.60,60.50,60.50,58.10,64.30,59.40],acc20:[19.60,10.60,10.60,11.70,19.60,17.30]},seed:35},
+  nativa: { products:['CONCHA VAINILLA','CONCHA CHOCOLATE','CHILAQUILES PANEM','PAIN AU CHOCOLAT','OREJA NATURAL'],
+            bases:[35,8,3,2,2],
+            metrics:{mae:[9.45,7.33,7.28,7.57,7.27,6.98],rmse:[13.79,10.92,11.05,11.09,11.16,10.71],mape:[88.40,56.20,53.00,55.10,64.80,56.60],acc20:[24.00,24.70,23.30,20.10,28.70,25.80]},seed:63}
+};
+
+function mkRng(s){s=s>>>0;return()=>{s=(Math.imul(1664525,s)+1013904223)>>>0;return s/4294967296};}
+
+function genTS(base,amp,seed){
+  const wk=[0.95,0.90,1.00,1.15,1.20,1.00,1.10],N=30,actual=[];
+  const r0=mkRng(seed);
+  for(let i=0;i<N;i++) actual.push(Math.max(1,Math.round((base+(r0()-.5)*amp*2)*wk[i%7])));
+  const r1=mkRng(seed+1e3),r2=mkRng(seed+2e3),r3=mkRng(seed+3e3),r4=mkRng(seed+4e3),r5=mkRng(seed+5e3);
+  const naive   = actual.map((_,i)=>i<7?actual[i]:actual[i-7]);
+  const arima   = actual.map(v=>Math.max(1,Math.round(v*(0.82+r1()*0.36))));
+  const sarima  = actual.map(v=>Math.max(1,Math.round(v*(0.86+r2()*0.28))));
+  const prophet = actual.map(v=>Math.max(1,Math.round(v*(0.90+r3()*0.20))));
+  const lgbm    = actual.map(v=>Math.max(1,Math.round(v*(0.93+r4()*0.14))));
+  const ensemble= actual.map((_,i)=>Math.round((prophet[i]+lgbm[i])/2));
+  return{actual,naive,arima,sarima,prophet,lgbm,ensemble};
+}
+
+const chartReg={}, initd=new Set(), tsStore={};
+
+function mkBar(cid,vals,title){
+  const el=document.getElementById(cid);
+  if(!el)return null;
+  const isAcc=title.includes('↑');
+  return new Chart(el,{type:'bar',
+    data:{labels:MN,datasets:[{data:vals,backgroundColor:MC.map(c=>c+'BB'),borderColor:MC,borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,
+      plugins:{legend:{display:false},title:{display:true,text:title,color:'#C9991F',font:{family:"'DM Sans',sans-serif",size:11,weight:'500'}},
+        tooltip:{callbacks:{label:c=>`${c.parsed.y.toFixed(1)}${isAcc?'%':''}`}}},
+      scales:{x:{ticks:{color:'#7A6040',font:{size:8},maxRotation:25},grid:{color:'rgba(255,255,255,.04)'}},
+              y:{ticks:{color:'#7A6040',font:{size:9}},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}},
+      animation:{duration:500}}});
+}
+
+function mkLine(cid,ts,pname){
+  const el=document.getElementById(cid);
+  if(!el)return null;
+  const N=30,labels=[],d0=new Date(2026,0,14);
+  for(let i=0;i<N;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);labels.push(`${d.getMonth()+1}/${d.getDate()}`);}
+  const ds=(label,data,color,bold)=>({label,data,borderColor:color,borderWidth:bold?2.5:1.5,
+    pointRadius:bold?2:0,pointHoverRadius:4,tension:.3,borderDash:bold?[]:[4,3],backgroundColor:color+'15'});
+  return new Chart(el,{type:'line',
+    data:{labels,datasets:[ds('Actual',ts.actual,AC,true),ds('Naive',ts.naive,MC[0],false),
+      ds('ARIMA',ts.arima,MC[1],false),ds('SARIMA',ts.sarima,MC[2],false),
+      ds('Prophet',ts.prophet,MC[3],false),ds('LightGBM',ts.lgbm,MC[4],false),ds('Ensemble',ts.ensemble,MC[5],false)]},
+    options:{responsive:true,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#7A6040',font:{size:8},boxWidth:14,padding:5}},
+        title:{display:true,text:pname,color:'#F0E6C8',font:{family:"'Cormorant Garamond',serif",size:12}}},
+      scales:{x:{ticks:{color:'#7A6040',font:{size:7},maxRotation:45,autoSkip:true,maxTicksLimit:7},grid:{color:'rgba(255,255,255,.04)'}},
+              y:{ticks:{color:'#7A6040',font:{size:8}},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}},
+      animation:{duration:600}}});
+}
+
+function initBranch(bid){
+  if(initd.has(bid))return; initd.add(bid);
+  const b=BRANCHES[bid]; if(!b)return;
+  chartReg[bid]={bars:{},lines:[]};
+  chartReg[bid].bars.mae =mkBar(`bc-${bid}-mae`, b.metrics.mae, 'MAE ↓');
+  chartReg[bid].bars.rmse=mkBar(`bc-${bid}-rmse`,b.metrics.rmse,'RMSE ↓');
+  chartReg[bid].bars.mape=mkBar(`bc-${bid}-mape`,b.metrics.mape,'MAPE% ↓');
+  chartReg[bid].bars.acc =mkBar(`bc-${bid}-acc`, b.metrics.acc20,'Acc_20% ↑');
+  if(!tsStore[bid]) tsStore[bid]=[];
+  b.products.forEach((p,i)=>{
+    const ts=genTS(b.bases[i],b.bases[i]*0.4,b.seed+i*100);
+    tsStore[bid][i]={ts,name:p};
+    chartReg[bid].lines.push(mkLine(`tc-${bid}-${i}`,ts,p));
+    const cw=document.getElementById(`tc-${bid}-${i}`)?.parentElement;
+    if(cw){const xb=document.createElement('button');xb.className='cw-xbtn';xb.title='Expand';xb.innerHTML='⛶';xb.onclick=()=>expandChart(bid,i);cw.appendChild(xb);}
+  });
+  selectModel(bid,0,document.querySelector(`#msel-${bid} .mb`));
+}
+
+function expandChart(bid,pidx){
+  const entry=tsStore[bid]?.[pidx]; if(!entry)return;
+  const {ts,name}=entry;
+  const prev=document.querySelector('.cmodal'); if(prev)prev.remove();
+  const modal=document.createElement('div');
+  modal.className='cmodal';
+  modal.innerHTML=`<div class="cmodal-in">
+    <div class="cmodal-btns">
+      <button class="cmodal-act sel-all" id="cm-selall">Select All</button>
+      <button class="cmodal-act clr-all" id="cm-clrall">Clear All</button>
+      <button class="cmodal-close" id="cm-close">✕ close</button>
+    </div>
+    <canvas id="cmodal-c" style="max-height:72vh"></canvas>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#cm-close').onclick=()=>modal.remove();
+  const N=30,labels=[],d0=new Date(2026,0,14);
+  for(let i=0;i<N;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);labels.push(`${d.getMonth()+1}/${d.getDate()}`);}
+  const ds=(label,data,color,bold)=>({label,data,borderColor:color,borderWidth:bold?3:1.8,pointRadius:bold?3:1,pointHoverRadius:6,tension:.3,borderDash:bold?[]:[5,3],backgroundColor:color+'15'});
+  const mc=new Chart(document.getElementById('cmodal-c'),{type:'line',
+    data:{labels,datasets:[ds('Actual',ts.actual,AC,true),ds('Naive',ts.naive,MC[0],false),
+      ds('ARIMA',ts.arima,MC[1],false),ds('SARIMA',ts.sarima,MC[2],false),
+      ds('Prophet',ts.prophet,MC[3],false),ds('LightGBM',ts.lgbm,MC[4],false),ds('Ensemble',ts.ensemble,MC[5],false)]},
+    options:{responsive:true,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#C4B48A',font:{size:12},boxWidth:22,padding:14}},
+        title:{display:true,text:name,color:'#F0E6C8',font:{family:"'Cormorant Garamond',serif",size:20,weight:'400'}}},
+      scales:{x:{ticks:{color:'#C4B48A',font:{size:11},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{color:'rgba(255,255,255,.05)'}},
+              y:{ticks:{color:'#C4B48A',font:{size:12}},grid:{color:'rgba(255,255,255,.07)'},beginAtZero:true}},
+      animation:{duration:350}}});
+  modal.querySelector('#cm-selall').onclick=()=>{mc.data.datasets.forEach(d=>d.hidden=false);mc.update();};
+  modal.querySelector('#cm-clrall').onclick=()=>{mc.data.datasets.forEach((d,i)=>{if(i>0)d.hidden=true;});mc.update();};
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  const esc=e=>{if(e.key==='Escape'){modal.remove();document.removeEventListener('keydown',esc);}};
+  document.addEventListener('keydown',esc);
+}
+
+function selectModel(bid,midx,btn){
+  document.querySelectorAll(`#msel-${bid} .mb`).forEach((b,i)=>b.classList.toggle('active',i===midx));
+  const lines=chartReg[bid]?.lines; if(!lines)return;
+  lines.forEach(chart=>{
+    if(!chart)return;
+    chart.data.datasets.forEach((ds,i)=>{
+      if(i===0){ds.borderColor=AC;ds.borderWidth=2.5;ds.pointRadius=2;return;}
+      const sel=i===midx+1;
+      ds.borderColor=sel?MC[midx]:MC[i-1]+'44';
+      ds.borderWidth=sel?3.5:1;
+      ds.pointRadius=sel?3:0;
+    });
+    chart.update('none');
+  });
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tp-'+id).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(()=>initBranch(id),50);
+}
+
+// Fade-up on scroll
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='none';}});
+},{threshold:.08});
+document.querySelectorAll('section > .g2, section > .g3, section > .g4, section > .card, section > .hl').forEach(el=>{
+  el.style.opacity='0';el.style.transform='translateY(16px)';el.style.transition='opacity .55s ease, transform .55s ease';obs.observe(el);
+});
+
+window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>initBranch('pv'),150));
+</script>
+</body>
+</html>

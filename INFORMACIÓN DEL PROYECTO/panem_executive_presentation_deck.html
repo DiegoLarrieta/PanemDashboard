@@ -1,0 +1,1427 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panem Demand Forecasting Dashboard · Executive Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --espresso:#130A04;
+  --mahogany:#2A1208;
+  --walnut:#4A2010;
+  --bark:#6B3820;
+  --gold:#C9991F;
+  --gold-bright:#E0B840;
+  --gold-muted:#8A6A18;
+  --cream:#F0E6C8;
+  --cream-dim:#C4B48A;
+  --warm-white:#FBF5E8;
+  --muted:#7A6040;
+  --success:#5A9E6A;
+  --danger:#B04040;
+  --ink:#090503;
+  --slide-w:1280px;
+  --slide-h:720px;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:var(--espresso);
+  color:var(--cream);
+  font-family:'DM Sans',sans-serif;
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.028;
+  z-index:100;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+}
+.deck{
+  position:fixed;
+  inset:0;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(ellipse at 24% 28%, rgba(201,153,31,.12) 0%, transparent 42%),
+    radial-gradient(ellipse at 80% 80%, rgba(74,32,16,.55) 0%, transparent 48%),
+    var(--espresso);
+}
+.stage{
+  width:100vw;
+  height:100vh;
+  display:grid;
+  place-items:center;
+  position:relative;
+}
+.slide{
+  width:min(var(--slide-w), 100vw);
+  height:min(var(--slide-h), 100vh);
+  aspect-ratio:16/9;
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(34px) scale(.985);
+  transition:opacity .35s ease, transform .35s ease;
+  background:
+    linear-gradient(160deg, rgba(74,32,16,.95) 0%, rgba(42,18,8,.98) 45%, rgba(19,10,4,1) 100%);
+  border:1px solid rgba(201,153,31,.25);
+  box-shadow:0 28px 90px rgba(0,0,0,.58);
+  overflow:hidden;
+  padding:56px 70px;
+}
+.slide.active{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateX(0) scale(1);
+}
+.slide.prev{
+  transform:translateX(-34px) scale(.985);
+}
+.slide::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(224,184,64,.10) 0%, transparent 38%),
+    linear-gradient(90deg, rgba(19,10,4,.36), transparent 44%);
+}
+.slide > *{position:relative;z-index:1}
+.brand{
+  position:absolute;
+  top:18px;
+  right:34px;
+  z-index:2;
+  width:92px;
+  height:42px;
+  color:transparent;
+  font-size:0;
+  letter-spacing:0;
+  background:url("logo_panem_sin_fondo.png") center/contain no-repeat;
+  filter:drop-shadow(0 8px 14px rgba(0,0,0,.38));
+}
+.footer{
+  position:absolute;
+  left:70px;
+  right:70px;
+  bottom:26px;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  color:var(--muted);
+  font:12px/1.2 'DM Mono',monospace;
+  letter-spacing:.05em;
+}
+.kicker{
+  font-family:'DM Mono',monospace;
+  color:var(--gold);
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  font-size:13px;
+  margin-bottom:16px;
+}
+h1,h2,h3{
+  margin:0;
+  font-family:'Cormorant Garamond',serif;
+}
+h1{
+  color:var(--warm-white);
+  font-size:82px;
+  line-height:.9;
+  letter-spacing:0;
+}
+h1 em,h2 em,h3 em{font-style:normal;color:var(--gold)}
+h2{
+  color:var(--warm-white);
+  font-size:48px;
+  line-height:1.03;
+  font-weight:600;
+  margin-bottom:22px;
+}
+h3{
+  color:var(--gold-bright);
+  font-size:28px;
+  line-height:1.08;
+  font-weight:600;
+  margin-bottom:10px;
+}
+p{
+  color:var(--cream-dim);
+  font-size:22px;
+  line-height:1.42;
+  margin:0 0 16px;
+}
+ul{
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+li{
+  color:var(--cream-dim);
+  font-size:21px;
+  line-height:1.34;
+  margin:0 0 12px;
+  padding-left:26px;
+  position:relative;
+}
+li::before{
+  content:"→";
+  position:absolute;
+  left:0;
+  top:0;
+  color:var(--gold);
+}
+.small li{font-size:18px;margin-bottom:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:stretch}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.card{
+  background:rgba(0,0,0,.30);
+  border:1px solid rgba(201,153,31,.18);
+  border-radius:var(--r);
+  padding:24px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+.card.tight{padding:18px}
+.card h3{font-size:25px}
+.card p,.card li{font-size:18px}
+.metric{
+  background:rgba(0,0,0,.36);
+  border:1px solid rgba(201,153,31,.24);
+  border-radius:var(--r);
+  padding:20px 18px;
+  text-align:center;
+}
+.metric .label{
+  color:var(--muted);
+  font:12px/1.2 'DM Mono',monospace;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+  margin-bottom:8px;
+}
+.metric .value{
+  font:500 42px/1 'DM Mono',monospace;
+  color:var(--gold-bright);
+}
+.metric .sub{
+  color:var(--cream-dim);
+  font-size:14px;
+  margin-top:7px;
+}
+.hl{
+  background:rgba(201,153,31,.08);
+  border-left:4px solid var(--gold);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:18px 22px;
+  color:var(--cream);
+  font-size:20px;
+  line-height:1.36;
+}
+.tag{
+  display:inline-block;
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  color:var(--gold-bright);
+  background:rgba(201,153,31,.12);
+  border:1px solid rgba(201,153,31,.30);
+  padding:6px 10px;
+  border-radius:999px;
+  margin:4px 5px 4px 0;
+}
+.flow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:30px;
+}
+.flow .node{
+  flex:1;
+  min-height:86px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:var(--cream);
+  font-weight:600;
+}
+.flow .arrow{
+  color:var(--gold);
+  font-family:'DM Mono',monospace;
+  font-size:26px;
+}
+.split-cover{
+  display:grid;
+  grid-template-columns:1.08fr .92fr;
+  height:100%;
+  margin:-56px -70px;
+}
+.cover-left{
+  padding:78px 70px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  border-right:1px solid rgba(201,153,31,.28);
+  background:linear-gradient(160deg, var(--walnut), var(--espresso));
+}
+.cover-right{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  background:var(--espresso);
+}
+.logo-word{
+  font-family:'Cormorant Garamond',serif;
+  color:var(--gold);
+  font-size:86px;
+  font-weight:300;
+  letter-spacing:.25em;
+  margin-bottom:8px;
+}
+.logo-sub{
+  font-family:'DM Mono',monospace;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.28em;
+  font-size:14px;
+}
+.cover-logo{
+  width:min(360px, 72%);
+  height:auto;
+  filter:drop-shadow(0 22px 38px rgba(0,0,0,.44));
+}
+.cover-logo-frame{
+  display:grid;
+  place-items:center;
+  width:76%;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:
+    radial-gradient(circle, rgba(201,153,31,.18), transparent 60%),
+    rgba(255,255,255,.02);
+  border:1px solid rgba(201,153,31,.18);
+}
+.team{
+  margin-top:28px;
+  padding-top:18px;
+  border-top:1px solid rgba(201,153,31,.14);
+}
+.team div{
+  color:var(--cream-dim);
+  font-size:16px;
+  margin-bottom:5px;
+}
+.section-head{
+  display:flex;
+  align-items:stretch;
+  border:1px solid var(--gold);
+  border-radius:10px;
+  overflow:hidden;
+  width:max-content;
+  margin-bottom:26px;
+}
+.section-head .num{
+  background:var(--gold);
+  color:var(--espresso);
+  font:500 15px/1 'DM Mono',monospace;
+  padding:13px 18px;
+}
+.section-head .text{
+  background:rgba(0,0,0,.34);
+  color:var(--warm-white);
+  font:600 23px/1 'Cormorant Garamond',serif;
+  padding:10px 22px 11px;
+  min-width:260px;
+}
+.pipeline{
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr;
+  align-items:center;
+  gap:14px;
+  margin-top:28px;
+}
+.pipeline .step{min-height:150px}
+.pipeline .big-arrow{font:500 34px/1 'DM Mono',monospace;color:var(--gold)}
+.chart-panel{
+  background:rgba(0,0,0,.32);
+  border:1px solid rgba(201,153,31,.18);
+  border-radius:var(--r);
+  padding:22px 24px;
+}
+.bar-row{
+  display:grid;
+  grid-template-columns:180px 1fr 70px;
+  gap:14px;
+  align-items:center;
+  margin:15px 0;
+}
+.bar-label{
+  color:var(--cream-dim);
+  font:14px/1.2 'DM Mono',monospace;
+}
+.bar-track{
+  height:20px;
+  background:rgba(255,255,255,.055);
+  border-radius:999px;
+  overflow:hidden;
+}
+.bar-fill{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--gold-muted),var(--gold-bright));
+}
+.bar-val{
+  color:var(--gold-bright);
+  font:14px/1.2 'DM Mono',monospace;
+  text-align:right;
+}
+.branch-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:12px;
+}
+.branch{
+  min-height:145px;
+  background:rgba(0,0,0,.28);
+  border:1px solid rgba(201,153,31,.17);
+  border-radius:12px;
+  padding:14px 11px;
+  text-align:center;
+}
+.branch.highlight{
+  border-color:var(--gold);
+  background:rgba(201,153,31,.08);
+}
+.branch .name{
+  color:var(--gold-bright);
+  font:500 13px/1.2 'DM Mono',monospace;
+  margin-bottom:14px;
+}
+.branch .prod{
+  color:var(--cream);
+  font-weight:600;
+  font-size:17px;
+  line-height:1.15;
+}
+.heatmap{
+  display:grid;
+  grid-template-columns:90px repeat(7,1fr);
+  gap:8px;
+  align-items:stretch;
+}
+.heatmap div{
+  min-height:42px;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--cream);
+  font:12px/1 'DM Mono',monospace;
+}
+.heatmap .head,.heatmap .rowlab{
+  color:var(--muted);
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(201,153,31,.10);
+}
+.h1{background:rgba(201,153,31,.08)}
+.h2{background:rgba(201,153,31,.15)}
+.h3{background:rgba(201,153,31,.25)}
+.h4{background:rgba(201,153,31,.39)}
+.h5{background:rgba(224,184,64,.56);color:var(--espresso)!important;font-weight:700!important}
+.model-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:14px;
+}
+.model-card{
+  min-height:168px;
+  text-align:center;
+  padding:17px 13px;
+}
+.model-card .icon{
+  width:44px;height:44px;border-radius:50%;
+  border:1px solid var(--gold);
+  color:var(--gold);
+  display:grid;place-items:center;
+  margin:0 auto 12px;
+  font-family:'DM Mono',monospace;
+}
+.model-card h3{
+  font-size:22px;
+}
+.model-card p{font-size:15px;margin:0}
+.band{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr auto 1fr;
+  gap:10px;
+  align-items:center;
+}
+.band .zone{
+  height:88px;
+  border-radius:12px;
+  border:1px solid rgba(201,153,31,.18);
+  background:rgba(0,0,0,.28);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  padding:10px;
+}
+.band .zone strong{
+  color:var(--gold-bright);
+  font-family:'DM Mono',monospace;
+}
+.band .arr{
+  color:var(--gold);
+  font-size:28px;
+  font-family:'DM Mono',monospace;
+}
+.compare{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:18px;
+}
+.delta .metric .value{font-size:34px}
+.delta .before{color:var(--danger)}
+.delta .after{color:var(--success)}
+.screenshot-card{
+  position:relative;
+  overflow:visible;
+  border-radius:0;
+  border:1px solid rgba(201,153,31,.18);
+  background:rgba(0,0,0,.35);
+  box-shadow:0 18px 44px rgba(0,0,0,.36);
+}
+.screenshot-card img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border-radius:0;
+}
+.screenshot-card.contain img{object-fit:contain}
+.hotspot{
+  position:absolute;
+  left:var(--x);
+  top:var(--y);
+  width:12px;
+  height:12px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  border:1px solid rgba(251,245,232,.72);
+  background:var(--gold-bright);
+  box-shadow:0 0 0 4px rgba(201,153,31,.18), 0 0 14px rgba(224,184,64,.42);
+  cursor:help;
+}
+.hotspot::after{
+  content:attr(data-tip);
+  position:absolute;
+  left:50%;
+  bottom:30px;
+  transform:translateX(-50%);
+  width:235px;
+  padding:12px 14px;
+  border-radius:10px;
+  background:rgba(9,5,3,.94);
+  border:1px solid rgba(201,153,31,.38);
+  color:var(--cream);
+  font:14px/1.28 'DM Sans',sans-serif;
+  text-align:left;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease;
+  z-index:5;
+}
+.hotspot:hover::after{
+  opacity:1;
+  transform:translateX(-50%) translateY(-4px);
+}
+.demo-layout{
+  display:grid;
+  grid-template-columns:1.26fr .74fr;
+  gap:24px;
+  align-items:start;
+}
+.demo-layout.wide{
+  grid-template-columns:1fr;
+  gap:18px;
+}
+.demo-shot{
+  height:345px;
+  min-height:0;
+  display:grid;
+  place-items:center;
+  padding:0;
+}
+.demo-shot.tall{height:392px}
+.demo-shot.wide{height:286px}
+.demo-shot.fit-product{height:392px;aspect-ratio:662/510;width:auto;max-width:100%;justify-self:center}
+.demo-shot.fit-bake-plan{height:392px;aspect-ratio:685/534;width:auto;max-width:100%;justify-self:center}
+.demo-shot.fit-analytics-graphs{height:392px;aspect-ratio:653/512;width:auto;max-width:100%;justify-self:center}
+.demo-shot.fit-heatmap{height:365px;aspect-ratio:1097/508;width:auto;max-width:100%;justify-self:center}
+.demo-shot.fit-model-data{height:392px;aspect-ratio:667/501;width:auto;max-width:100%;justify-self:center}
+.demo-notes{
+  display:grid;
+  gap:12px;
+}
+.demo-note{
+  background:rgba(0,0,0,.30);
+  border:1px solid rgba(201,153,31,.18);
+  border-left:4px solid var(--gold);
+  border-radius:0 10px 10px 0;
+  padding:12px 14px;
+}
+.demo-note strong{
+  display:block;
+  color:var(--gold-bright);
+  font:500 13px/1 'DM Mono',monospace;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.demo-note span{
+  display:block;
+  color:var(--cream-dim);
+  font-size:15px;
+  line-height:1.28;
+}
+.mape-bars{
+  height:300px;
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:12px;
+  align-items:end;
+  padding:22px 12px 0;
+  border-radius:14px;
+  border:1px solid rgba(201,153,31,.18);
+  background:
+    linear-gradient(to top, rgba(201,153,31,.09) 1px, transparent 1px) 0 0/100% 25%,
+    rgba(0,0,0,.28);
+}
+.mape-bar{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-width:0;
+}
+.mape-bar .val{
+  color:var(--cream);
+  font:500 13px/1 'DM Mono',monospace;
+}
+.mape-bar .col{
+  width:100%;
+  max-width:54px;
+  height:var(--h);
+  min-height:42px;
+  border-radius:10px 10px 3px 3px;
+  background:linear-gradient(180deg, rgba(224,184,64,.95), rgba(201,153,31,.54));
+  border:1px solid rgba(251,245,232,.18);
+  box-shadow:0 12px 24px rgba(0,0,0,.24);
+}
+.mape-bar.highlight .col{
+  background:linear-gradient(180deg, #F1CE62, #C9991F);
+  box-shadow:0 0 28px rgba(224,184,64,.22);
+}
+.mape-bar.lgbm .col{
+  background:linear-gradient(180deg, #65DCE7, #17BECF);
+}
+.mape-bar .name{
+  color:var(--cream-dim);
+  font:11px/1.12 'DM Mono',monospace;
+  text-align:center;
+  min-height:28px;
+}
+.callouts{
+  display:grid;
+  gap:12px;
+}
+.callout{
+  background:rgba(0,0,0,.30);
+  border:1px solid rgba(201,153,31,.18);
+  border-left:4px solid var(--gold);
+  border-radius:0 12px 12px 0;
+  padding:13px 16px;
+  color:var(--cream);
+  font-size:17px;
+}
+.roadmap{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:20px;
+  margin-top:22px;
+}
+.roadmap .phase{
+  min-height:270px;
+}
+.phase .period{
+  color:var(--gold);
+  font:500 15px/1 'DM Mono',monospace;
+  letter-spacing:.08em;
+  margin-bottom:14px;
+}
+.controls{
+  position:fixed;
+  z-index:200;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:rgba(9,5,3,.72);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(201,153,31,.22);
+  border-radius:999px;
+  padding:8px 12px;
+}
+button{
+  border:1px solid rgba(201,153,31,.28);
+  color:var(--cream);
+  background:rgba(201,153,31,.10);
+  border-radius:999px;
+  padding:8px 12px;
+  font:500 13px/1 'DM Mono',monospace;
+  cursor:pointer;
+}
+button:hover{background:var(--gold);color:var(--espresso)}
+.counter{
+  min-width:76px;
+  text-align:center;
+  color:var(--cream-dim);
+  font:500 13px/1 'DM Mono',monospace;
+}
+.progress{
+  position:fixed;
+  left:0;
+  top:0;
+  height:4px;
+  background:linear-gradient(90deg,var(--gold-muted),var(--gold-bright));
+  width:0%;
+  z-index:220;
+  transition:width .25s ease;
+}
+.help{
+  position:fixed;
+  top:15px;
+  left:18px;
+  z-index:210;
+  color:var(--muted);
+  font:12px/1.3 'DM Mono',monospace;
+  background:rgba(9,5,3,.55);
+  border:1px solid rgba(201,153,31,.16);
+  border-radius:999px;
+  padding:8px 12px;
+}
+@media(max-width:900px){
+  .slide{
+    width:100vw;height:100vh;aspect-ratio:auto;
+    padding:44px 26px 78px;
+    overflow:auto;
+  }
+  h1{font-size:56px}
+  h2{font-size:36px}
+  p,li{font-size:18px}
+  .grid2,.grid3,.grid4,.pipeline,.compare,.roadmap,.band,.demo-layout{grid-template-columns:1fr}
+  .pipeline .big-arrow,.band .arr{display:none}
+  .branch-grid,.model-grid{grid-template-columns:1fr 1fr}
+  .split-cover{grid-template-columns:1fr;margin:-44px -26px}
+  .cover-right{display:none}
+  .cover-left{padding:60px 32px}
+  .footer{left:26px;right:26px}
+  .help{display:none}
+}
+@media print{
+  html,body{overflow:visible;height:auto}
+  .deck,.stage{position:static;display:block;width:auto;height:auto}
+  .slide{position:relative;opacity:1;transform:none;page-break-after:always;width:1280px;height:720px}
+  .controls,.progress,.help{display:none}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="help">Use ← / → or Space · F for fullscreen</div>
+<main class="deck">
+  <div class="stage" id="stage">
+
+    <section class="slide active" data-title="Cover">
+      <div class="split-cover">
+        <div class="cover-left">
+          <div class="kicker">Executive Final Presentation</div>
+          <h1>Panem<br><em>Demand</em><br>Forecasting</h1>
+          <p style="max-width:620px;margin-top:28px">From historical sales data to operational production planning.</p>
+          <div class="team">
+            <div>Jesús Emiliano Morales Villela — A00840087</div>
+            <div>Luis Diego Dominguez Larrieta — A01275640</div>
+            <div>David Alexander López Guzmán — A00835935</div>
+            <div>Jose Dolores Gómez Soto — A01712281</div>
+            <div>Ignacio Xavier Chávez Quiroz — A00574357</div>
+          </div>
+          <div style="margin-top:22px" class="kicker">June 11, 2026</div>
+        </div>
+        <div class="cover-right">
+          <div class="cover-logo-frame">
+            <img class="cover-logo" src="logo_panem_sin_fondo.png" alt="Panem Bakery & Bistro logo">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-title="Project Context">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">03</span><span class="text">Project Context</span></div>
+      <h2>Panem operates in a high-uncertainty fresh-food environment</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Operating reality</h3>
+          <ul>
+            <li>Multiple branches with fresh bakery and food products.</li>
+            <li>Production planning happens before demand is fully visible.</li>
+            <li>Each branch has different demand behavior and product mix.</li>
+            <li>Fresh products have limited shelf life.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Why this matters</h3>
+          <p>Forecast error has a direct operational cost. Too much production increases waste; too little production creates stockouts and lost sales.</p>
+          <div class="hl">The project adds a data baseline to planning that currently depends on experience and recent sales memory.</div>
+        </div>
+      </div>
+      <div class="grid4" style="margin-top:22px">
+        <div class="metric"><div class="label">Decision unit</div><div class="value" style="font-size:30px">Branch</div><div class="sub">Local demand</div></div>
+        <div class="metric"><div class="label">Planning unit</div><div class="value" style="font-size:30px">Product</div><div class="sub">SKU behavior</div></div>
+        <div class="metric"><div class="label">Time unit</div><div class="value" style="font-size:30px">Day</div><div class="sub">Production date</div></div>
+        <div class="metric"><div class="label">Output</div><div class="value" style="font-size:30px">Units</div><div class="sub">Physical quantity</div></div>
+      </div>
+      <div class="footer"><span>Context</span><span>03 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Business Questions">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">04</span><span class="text">Business Problem</span></div>
+      <h2>What decisions should the data help answer?</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Main decision question</h3>
+          <p style="font-size:28px;color:var(--cream)">How many units should Panem produce for each key product, branch, and planning date?</p>
+        </div>
+        <div class="card">
+          <h3>Analysis questions</h3>
+          <ul class="small">
+            <li>Which branches concentrate the highest demand?</li>
+            <li>Which products matter most for production planning?</li>
+            <li>Which variables anticipate demand behavior?</li>
+            <li>Which model is reliable enough to support planning?</li>
+            <li>How can the forecast become a simple dashboard workflow?</li>
+          </ul>
+        </div>
+      </div>
+      <div class="pipeline">
+        <div class="card step"><h3>Problem</h3><p>Production uncertainty</p></div>
+        <div class="big-arrow">→</div>
+        <div class="card step"><h3>Forecast</h3><p>Expected units by branch, product, and date</p></div>
+        <div class="big-arrow">→</div>
+        <div class="card step"><h3>Action</h3><p>Recommended bake plan with operational review</p></div>
+      </div>
+      <div class="footer"><span>Problem → Analysis → Decision</span><span>04 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Data Overview">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">05</span><span class="text">Data Overview</span></div>
+      <h2>The project began with a large transactional sales base</h2>
+      <div class="grid4">
+        <div class="metric"><div class="label">Source files</div><div class="value">186</div><div class="sub">POS CSVs</div></div>
+        <div class="metric"><div class="label">Raw rows</div><div class="value">3.76M</div><div class="sub">transaction lines</div></div>
+        <div class="metric"><div class="label">Branches</div><div class="value">7</div><div class="sub">locations</div></div>
+        <div class="metric"><div class="label">Selected targets</div><div class="value">35</div><div class="sub">top product-branch pairs</div></div>
+      </div>
+      <div class="grid2" style="margin-top:28px">
+        <div class="card">
+          <h3>Final modeling logic</h3>
+          <ul>
+            <li>Daily demand by branch, product, and date.</li>
+            <li>Focus on food and bakery items.</li>
+            <li>Beverages and modifiers removed.</li>
+            <li>Top products per branch selected to prioritize the highest operational impact.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Forecast horizon</h3>
+          <p>Mainly daily and 7-day planning, aligned with operational production needs.</p>
+          <span class="tag">Daily units</span><span class="tag">7-day view</span><span class="tag">Production planning</span>
+        </div>
+      </div>
+      <div class="footer"><span>Dataset size and scope</span><span>05 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Data Transformation">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">06</span><span class="text">Data Transformation</span></div>
+      <h2>The sales data was prepared for daily demand forecasting</h2>
+      <div class="pipeline">
+        <div class="card step">
+          <h3>Raw ticket-line data</h3>
+          <p>Transaction-level records from the point-of-sale system.</p>
+        </div>
+        <div class="big-arrow">→</div>
+        <div class="card step">
+          <h3>Cleaned food/bakery data</h3>
+          <p>Modifiers, beverages, and non-commercial records removed.</p>
+        </div>
+        <div class="big-arrow">→</div>
+        <div class="card step">
+          <h3>Daily demand table</h3>
+          <p>For each branch, products were grouped by day to calculate units sold.</p>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:30px">
+        <div class="hl">The model predicts <strong>units sold</strong> because the production decision is a physical quantity: how much to bake.</div>
+        <div class="card tight"><h3>Why it matters</h3><p>Forecasting needs a daily branch-product table: one row for what was sold, where it was sold, and on which date.</p></div>
+      </div>
+      <div class="footer"><span>From POS data to operational data</span><span>06 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Methodology">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">07</span><span class="text">Methodology Overview</span></div>
+      <h2>A full analytical pipeline was built from data preparation to deployment</h2>
+      <div class="grid3">
+        <div class="card">
+          <h3>01 · Data Preparation</h3>
+          <ul class="small">
+            <li>Cleaning and filtering.</li>
+            <li>Name standardization.</li>
+            <li>Calendar completion.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>02 · Modeling & Validation</h3>
+          <ul class="small">
+            <li>Regression models.</li>
+            <li>Time-series models.</li>
+            <li>Tree-based models.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>03 · Decision Support</h3>
+          <ul class="small">
+            <li>Forecasts.</li>
+            <li>Manager and operator dashboard.</li>
+            <li>Bake-time recommendation table.</li>
+            <li>Inventory-fit review, feedback, and monitoring.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="hl" style="margin-top:28px">Main challenges: product inconsistencies, branch-level imbalance, zero-sales days, structural closures, volatile demand, and leakage prevention.</div>
+      <div class="footer"><span>Data → Model → Dashboard</span><span>07 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Finding 1">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">08</span><span class="text">Key Finding 1</span></div>
+      <h2>A few branches and products drive most of the operational impact</h2>
+      <div class="grid2" style="grid-template-columns:1.2fr .8fr">
+        <div class="chart-panel">
+          <div class="bar-row"><div class="bar-label">Punto Valle</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">26.0%</div></div>
+          <div class="bar-row"><div class="bar-label">Plaza QIN</div><div class="bar-track"><div class="bar-fill" style="width:77.7%"></div></div><div class="bar-val">20.2%</div></div>
+          <div class="bar-row"><div class="bar-label">Hotel Kavia</div><div class="bar-track"><div class="bar-fill" style="width:73.5%"></div></div><div class="bar-val">19.1%</div></div>
+          <div class="bar-row"><div class="bar-label">Hospital Zambrano</div><div class="bar-track"><div class="bar-fill" style="width:65.4%"></div></div><div class="bar-val">17.0%</div></div>
+          <div class="bar-row"><div class="bar-label">Carreta</div><div class="bar-track"><div class="bar-fill" style="width:38.8%"></div></div><div class="bar-val">10.1%</div></div>
+          <div class="bar-row"><div class="bar-label">Plaza Nativa</div><div class="bar-track"><div class="bar-fill" style="width:24.6%"></div></div><div class="bar-val">6.4%</div></div>
+          <div class="bar-row"><div class="bar-label">Credi Club</div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><div class="bar-val">1.3%</div></div>
+        </div>
+        <div class="card">
+          <h3>Executive interpretation</h3>
+          <ul>
+            <li>Punto Valle, Plaza QIN, Hotel Kavia, and Hospital Zambrano concentrate most volume.</li>
+            <li>Credi Club has much lower volume, making percentage error more volatile.</li>
+            <li>CONCHA VAINILLA is the strongest product overall.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="hl" style="margin-top:22px">Demand is not evenly distributed. Panem needs branch-specific and product-specific planning instead of a single global rule.</div>
+      <div class="footer"><span>Demand concentration by branch</span><span>08 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Finding 2">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">09</span><span class="text">Key Finding 2</span></div>
+      <h2>A single chain-wide forecast would hide important local patterns</h2>
+      <div class="branch-grid">
+        <div class="branch"><div class="name">Punto Valle</div><div class="prod">CONCHA VAINILLA</div></div>
+        <div class="branch"><div class="name">Plaza QIN</div><div class="prod">CONCHA VAINILLA</div></div>
+        <div class="branch highlight"><div class="name">Hotel Kavia</div><div class="prod">CHILAQUILES PANEM</div></div>
+        <div class="branch"><div class="name">Hospital Zambrano</div><div class="prod">CONCHA VAINILLA</div></div>
+        <div class="branch"><div class="name">Carreta</div><div class="prod">CONCHA VAINILLA</div></div>
+        <div class="branch"><div class="name">Plaza Nativa</div><div class="prod">CONCHA VAINILLA</div></div>
+        <div class="branch"><div class="name">Credi Club</div><div class="prod">CONCHA VAINILLA</div></div>
+      </div>
+      <div class="grid2" style="margin-top:28px">
+        <div class="card"><h3>Local behavior</h3><p>CONCHA VAINILLA leads in six of seven branches, but Hotel Kavia behaves differently.</p></div>
+        <div class="card"><h3>Operational meaning</h3><p>Branch context affects model behavior and production recommendations.</p></div>
+      </div>
+      <div class="footer"><span>Branch-specific demand intelligence</span><span>09 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Finding 3">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">10</span><span class="text">Key Finding 3</span></div>
+      <h2>Demand changes by weekday and month, creating clear seasonality</h2>
+      <div class="grid2" style="grid-template-columns:1.18fr .82fr;gap:22px">
+        <div class="chart-panel">
+          <div class="heatmap">
+            <div></div><div class="head">Mon</div><div class="head">Tue</div><div class="head">Wed</div><div class="head">Thu</div><div class="head">Fri</div><div class="head">Sat</div><div class="head">Sun</div>
+            <div class="rowlab">Q1</div><div class="h2"></div><div class="h1"></div><div class="h2"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h3"></div>
+            <div class="rowlab">Q2</div><div class="h2"></div><div class="h2"></div><div class="h3"></div><div class="h3"></div><div class="h4"></div><div class="h5">Peak</div><div class="h4"></div>
+            <div class="rowlab">Q3</div><div class="h3"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h4"></div><div class="h5">Peak</div><div class="h5"></div>
+            <div class="rowlab">Q4</div><div class="h3"></div><div class="h3"></div><div class="h4"></div><div class="h4"></div><div class="h5"></div><div class="h5">Peak</div><div class="h5"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Planning insight</h3>
+          <ul>
+            <li>The strongest calendar signal is not hour of day; it is the production date.</li>
+            <li>Weekends and later seasonal periods show stronger sales behavior.</li>
+            <li>This supports date-based forecasting and chronological validation.</li>
+          </ul>
+          <div class="hl" style="margin-top:18px">The heatmap keeps the same executive visual logic, but now focuses on calendar patterns that matter for the model.</div>
+        </div>
+      </div>
+      <div class="footer"><span>Weekday and monthly seasonality</span><span>10 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Finding 4">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">11</span><span class="text">Key Finding 4</span></div>
+      <h2>Recent sales history is the strongest signal</h2>
+      <div class="grid2" style="grid-template-columns:1.2fr .8fr">
+        <div class="chart-panel">
+          <div class="bar-row"><div class="bar-label">qty_roll_15</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">0.7109</div></div>
+          <div class="bar-row"><div class="bar-label">qty_roll_30</div><div class="bar-track"><div class="bar-fill" style="width:99.4%"></div></div><div class="bar-val">0.7067</div></div>
+          <div class="bar-row"><div class="bar-label">qty_roll_60</div><div class="bar-track"><div class="bar-fill" style="width:98.1%"></div></div><div class="bar-val">0.6972</div></div>
+          <div class="bar-row"><div class="bar-label">qty_roll_7</div><div class="bar-track"><div class="bar-fill" style="width:97.6%"></div></div><div class="bar-val">0.6940</div></div>
+          <div class="bar-row"><div class="bar-label">qty_roll_1</div><div class="bar-track"><div class="bar-fill" style="width:76.5%"></div></div><div class="bar-val">0.5437</div></div>
+        </div>
+        <div class="card">
+          <h3>Interpretation</h3>
+          <p>Past demand explains current demand better than isolated calendar or weather variables.</p>
+          <p>Weather, holidays, and quincena may still help through interactions with product and branch behavior.</p>
+        </div>
+      </div>
+      <div class="hl" style="margin-top:24px">The forecast improves when the model remembers what happened recently, especially around weekly purchasing patterns.</div>
+      <div class="footer"><span>Correlation with quantity</span><span>11 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Models">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">12</span><span class="text">Analytical Models</span></div>
+      <h2>Different models were tested to balance accuracy, interpretability, and operational value</h2>
+      <div class="model-grid">
+        <div class="card model-card"><div class="icon">LR</div><h3>Linear Regression</h3><p>Interpretable baseline.</p></div>
+        <div class="card model-card"><div class="icon">AR</div><h3>ARIMA</h3><p>Trend and temporal behavior.</p></div>
+        <div class="card model-card"><div class="icon">SA</div><h3>SARIMA</h3><p>Seasonality-aware time series.</p></div>
+        <div class="card model-card"><div class="icon">PR</div><h3>Prophet</h3><p>Final active model for seasonal forecast ranges.</p></div>
+        <div class="card model-card"><div class="icon">GB</div><h3>LightGBM / XGBoost</h3><p>Strong shadow models for nonlinear branch-product patterns.</p></div>
+        <div class="card model-card"><div class="icon">EN</div><h3>Ensemble</h3><p>Balances multiple model strengths.</p></div>
+      </div>
+      <div class="hl" style="margin-top:28px">The explanation should stay accessible: Prophet helps communicate seasonality and uncertainty ranges; LightGBM helps capture nonlinear operational patterns.</div>
+      <div class="footer"><span>Modeling approach</span><span>12 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Model Interpretation">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">13</span><span class="text">Model Interpretation</span></div>
+      <h2>The models are useful for planning, not for automatic exact production</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Model target</h3>
+          <ul>
+            <li>Units sold by product, branch, and date.</li>
+            <li>Chronological validation to avoid future leakage.</li>
+            <li>Baseline: Naive lag-7, meaning the same weekday from the previous week.</li>
+            <li>Metrics: MAE, RMSE, MAPE, WAPE, and accuracy within ±20%.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Managerial interpretation</h3>
+          <p>MAPE helped compare forecast error in business terms, but daily bakery demand remains volatile. Predictions should be reviewed with safety buffers before final production.</p>
+        </div>
+      </div>
+      <div class="band">
+        <div class="zone"><strong>Lower Bound</strong><span>conservative quantity</span></div>
+        <div class="zone"><strong>Forecast</strong><span>expected demand</span></div>
+        <div class="zone"><strong>Upper Bound</strong><span>80% confidence range</span></div>
+        <div class="arr">→</div>
+        <div class="zone"><strong>Operator Review</strong><span>final plan</span></div>
+      </div>
+      <div class="footer"><span>Forecast with human review</span><span>13 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Model Results">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">14</span><span class="text">Simplified Results</span></div>
+      <h2>Prophet and LightGBM were evaluated against the Naive weekly baseline</h2>
+      <p style="margin-top:-8px">MAPE was used as the main comparison metric because it normalizes error across products with different sales volumes.</p>
+      <div class="grid2" style="grid-template-columns:1.18fr .82fr;gap:22px">
+        <div>
+          <div class="mape-bars">
+            <div class="mape-bar"><div class="val">78.4%</div><div class="col" style="--h:245px"></div><div class="name">Naive<br>lag_7</div></div>
+            <div class="mape-bar"><div class="val">58.3%</div><div class="col" style="--h:182px"></div><div class="name">XGBoost</div></div>
+            <div class="mape-bar"><div class="val">58.2%</div><div class="col" style="--h:181px"></div><div class="name">ARIMA</div></div>
+            <div class="mape-bar"><div class="val">56.9%</div><div class="col" style="--h:178px"></div><div class="name">SARIMA</div></div>
+            <div class="mape-bar lgbm"><div class="val">60.6%</div><div class="col" style="--h:189px"></div><div class="name">LightGBM</div></div>
+            <div class="mape-bar highlight"><div class="val">51.8%</div><div class="col" style="--h:162px"></div><div class="name">Prophet</div></div>
+            <div class="mape-bar"><div class="val">56.4%</div><div class="col" style="--h:176px"></div><div class="name">Ensemble</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Executive interpretation</h3>
+          <ul>
+            <li>Naive lag_7 is the practical baseline.</li>
+            <li>Prophet had the lowest MAPE and gives an 80% range.</li>
+            <li>LightGBM remains valuable for nonlinear branch-product patterns.</li>
+          </ul>
+          <div class="hl" style="margin-top:18px">Lower bars are better. Forecasts remain decision support, not automatic orders.</div>
+        </div>
+      </div>
+      <div class="footer"><span>Model comparison with MAPE</span><span>14 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Menu">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">15</span><span class="text">Dashboard Demo 1</span></div>
+      <h2>The dashboard starts with a clear navigation and action layer</h2>
+      <div class="demo-layout wide">
+        <div class="screenshot-card demo-shot wide">
+          <img src="Capturas Dashboard/Botones Menú.png" alt="Dashboard menu, roles, branch/date controls, and action buttons">
+          <span class="hotspot" style="--x:22%;--y:24%" data-tip="Main navigation: Bake Plan for operations, Analytics for history, Model for performance, Feedback for learning."></span>
+          <span class="hotspot" style="--x:86%;--y:24%" data-tip="Role toggle separates operator workflows from analyst/model monitoring views."></span>
+          <span class="hotspot" style="--x:13%;--y:77%" data-tip="Branch and bake date localize the forecast to the decision Panem must make."></span>
+          <span class="hotspot" style="--x:72%;--y:78%" data-tip="Generate forecast, log actuals, and lock plan are the main operational actions."></span>
+        </div>
+        <div class="hl">This opening view frames the app as a guided workflow: choose context, generate forecast, review the plan, then record results.</div>
+      </div>
+      <div class="footer"><span>Menu and main buttons</span><span>15 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Bake Plan">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">16</span><span class="text">Dashboard Demo 2</span></div>
+      <h2>Bake Plan converts the forecast into production recommendations</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot fit-bake-plan">
+          <img src="Capturas Dashboard/Bake Plan.png" alt="Bake Plan page with KPIs, recommended bake table, branch chart, and forecast vs actual chart">
+          <span class="hotspot" style="--x:18%;--y:20%" data-tip="KPI cards summarize the plan: units to bake, revenue, waste, stock-out risk, and waste rate."></span>
+          <span class="hotspot" style="--x:35%;--y:45%" data-tip="Next 7D is the model recommendation for each product in the selected planning window."></span>
+          <span class="hotspot" style="--x:46%;--y:45%" data-tip="CI 80% shows the range of uncertainty around the forecast."></span>
+          <span class="hotspot" style="--x:77%;--y:55%" data-tip="Units by branch compares recommended volume across locations."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>KPIs</strong><span>Give a quick readout of the production plan before reviewing product-level details.</span></div>
+          <div class="demo-note"><strong>Recommended Bake</strong><span>Shows last 7 days, forecasted next 7 days, confidence interval, override, notes, and explanation.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Bake Plan workflow</span><span>16 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Override">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">17</span><span class="text">Dashboard Demo 3</span></div>
+      <h2>Override keeps the manager in control of the final production quantity</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot tall">
+          <img src="Capturas Dashboard/Override.png" alt="Override production panel over the Bake Plan page">
+          <span class="hotspot" style="--x:65%;--y:16%" data-tip="The override panel opens from a product row, keeping the decision tied to one item."></span>
+          <span class="hotspot" style="--x:64%;--y:41%" data-tip="Override units records the manager's final adjustment to the model recommendation."></span>
+          <span class="hotspot" style="--x:64%;--y:55%" data-tip="Reason captures why the forecast changed: gut feel, promotion, event, or operational constraint."></span>
+          <span class="hotspot" style="--x:64%;--y:76%" data-tip="Save override documents the final human-reviewed decision."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Human review</strong><span>The model gives a starting point; the manager can adjust when they know something the model cannot see.</span></div>
+          <div class="demo-note"><strong>Traceability</strong><span>Reason and notes make overrides auditable instead of invisible manual changes.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Override logic</span><span>17 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Product Selection">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">18</span><span class="text">Dashboard Demo 4</span></div>
+      <h2>Product Selection explains the recommendation behind one SKU</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot fit-product">
+          <img src="Capturas Dashboard/Product Selection.png" alt="Product detail view with predicted units, confidence interval, sales history, and peer comparison">
+          <span class="hotspot" style="--x:27%;--y:18%" data-tip="Branch and item selectors open a product-specific explanation from the recommended bake flow."></span>
+          <span class="hotspot" style="--x:25%;--y:39%" data-tip="Predicted units and 80% CI summarize the next-week recommendation and uncertainty range."></span>
+          <span class="hotspot" style="--x:32%;--y:77%" data-tip="90-day history lets the manager compare the forecast with recent sales behavior."></span>
+          <span class="hotspot" style="--x:80%;--y:77%" data-tip="Peer comparison shows whether this SKU behaves differently across branches."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Product detail</strong><span>Moves from a table row to a deeper explanation of a specific branch-product forecast.</span></div>
+          <div class="demo-note"><strong>Uncertainty</strong><span>The confidence interval shows why a single forecast number should be reviewed before production.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Product-level decision support</span><span>18 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Log Actions">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">19</span><span class="text">Dashboard Demo 5</span></div>
+      <h2>Log Actions records actual sales and waste after production</h2>
+      <div class="demo-layout wide">
+        <div class="screenshot-card demo-shot wide">
+          <img src="Capturas Dashboard/Log actuals.png" alt="Log Daily Actuals table with predicted, sold, and wasted units">
+          <span class="hotspot" style="--x:49%;--y:43%" data-tip="Predicted units remain visible so actual sales can be compared to the forecast."></span>
+          <span class="hotspot" style="--x:76%;--y:43%" data-tip="Sold units record demand reality after the production day."></span>
+          <span class="hotspot" style="--x:92%;--y:43%" data-tip="Wasted units capture overproduction, one of Panem's core business risks."></span>
+          <span class="hotspot" style="--x:50%;--y:91%" data-tip="Save this day stores the operational result for monitoring and future learning."></span>
+        </div>
+        <div class="hl">This step turns the bake plan into evidence: predicted units, sold units, and waste can now be compared.</div>
+      </div>
+      <div class="footer"><span>Logging actuals and waste</span><span>19 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Analytics">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">20</span><span class="text">Dashboard Demo 6</span></div>
+      <h2>Analytics gives managers historical context before trusting the forecast</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot">
+          <img src="Capturas Dashboard/Analytics.png" alt="Analytics page with sales over time by branch">
+          <span class="hotspot" style="--x:80%;--y:10%" data-tip="Branch filter changes the historical view from all branches to a specific location."></span>
+          <span class="hotspot" style="--x:83%;--y:28%" data-tip="Granularity switches between monthly and weekly patterns."></span>
+          <span class="hotspot" style="--x:52%;--y:57%" data-tip="Sales over time shows growth, drops, closures, and unusual branch behavior."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Historical demand</strong><span>Shows how sales evolved across branches and time.</span></div>
+          <div class="demo-note"><strong>Branch comparison</strong><span>Helps explain why one global forecast would hide local behavior.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Analytics overview</span><span>20 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Analytics Graphs">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">21</span><span class="text">Dashboard Demo 7</span></div>
+      <h2>Analytics Graph 1 shows demand drivers and product concentration</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot fit-analytics-graphs">
+          <img src="Capturas Dashboard/Analytics Graphs 1.png" alt="Analytics graphs for top products, monthly seasonality, weekday demand, weather impact, and holiday effect">
+          <span class="hotspot" style="--x:23%;--y:29%" data-tip="Top products identify which SKUs deserve the most production-planning attention."></span>
+          <span class="hotspot" style="--x:72%;--y:30%" data-tip="Monthly seasonality shows months where demand tends to strengthen or soften."></span>
+          <span class="hotspot" style="--x:17%;--y:76%" data-tip="Weekday demand supports date-based forecasting and weekly production planning."></span>
+          <span class="hotspot" style="--x:74%;--y:77%" data-tip="Holiday and quincena effects add operational context to the forecast."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Product focus</strong><span>Shows which bakery and food products dominate demand.</span></div>
+          <div class="demo-note"><strong>Seasonality</strong><span>Connects calendar behavior with model selection and planning buffers.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Analytics Graph 1</span><span>21 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Analytics Heatmap">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">22</span><span class="text">Dashboard Demo 8</span></div>
+      <h2>The heatmap makes weekday and monthly demand patterns easy to compare</h2>
+      <div class="demo-layout wide">
+        <div class="screenshot-card demo-shot fit-heatmap">
+          <img src="Capturas Dashboard/Analytics Graph Heatmap.png" alt="Demand heatmap with weekdays as rows and months as columns">
+          <span class="hotspot" style="--x:8%;--y:17%" data-tip="Monthly and weekly toggles change the heatmap view."></span>
+          <span class="hotspot" style="--x:57%;--y:18%" data-tip="Branch and product filters let the manager localize the pattern."></span>
+          <span class="hotspot" style="--x:49%;--y:62%" data-tip="Darker cells show higher average daily units for that weekday-month combination."></span>
+        </div>
+        <div class="hl">Rows are weekdays, columns are months, and darker cells indicate higher average daily units.</div>
+      </div>
+      <div class="footer"><span>Analytics heatmap</span><span>22 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Model">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">23</span><span class="text">Dashboard Demo 9</span></div>
+      <h2>The Model view documents the forecasting system and current performance</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot">
+          <img src="Capturas Dashboard/Model.png" alt="Model card with algorithm, training data, validation, baseline, features, and headline metrics">
+          <span class="hotspot" style="--x:34%;--y:27%" data-tip="Summary documents algorithm, training data, validation, baseline, and retraining information."></span>
+          <span class="hotspot" style="--x:36%;--y:53%" data-tip="Feature tags show the variables used by the forecasting process."></span>
+          <span class="hotspot" style="--x:49%;--y:84%" data-tip="Headline metrics compare algorithms using MAE, RMSE, MAPE, and accuracy within 20%."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Transparency</strong><span>The model card makes the forecast auditable for a non-technical audience.</span></div>
+          <div class="demo-note"><strong>Metrics</strong><span>Performance is shown by algorithm, not hidden behind a single forecast number.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Model card</span><span>23 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Model Data">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">24</span><span class="text">Dashboard Demo 10</span></div>
+      <h2>Model Data shows where the forecast is strong, weak, or still maturing</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot fit-model-data">
+          <img src="Capturas Dashboard/Model Data.png" alt="Model data page with MAE by SKU volume bucket, residual distribution, forecast error, and known limitations">
+          <span class="hotspot" style="--x:25%;--y:24%" data-tip="MAE by SKU volume bucket shows how error changes by product volume."></span>
+          <span class="hotspot" style="--x:72%;--y:24%" data-tip="Residual distribution shows whether errors are centered or biased."></span>
+          <span class="hotspot" style="--x:52%;--y:58%" data-tip="Rolling MAE will monitor drift once enough actuals are logged."></span>
+          <span class="hotspot" style="--x:55%;--y:83%" data-tip="Known limitations keep the model interpretation honest."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Error monitoring</strong><span>Tracks forecast quality by volume bucket and over time.</span></div>
+          <div class="demo-note"><strong>Limitations</strong><span>Documents low-demand SKUs, holidays, new SKUs, weather limits, and override discipline.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Model evaluation data</span><span>24 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Demo Feedback">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">25</span><span class="text">Dashboard Demo 11</span></div>
+      <h2>Feedback closes the loop between forecast, decision, and actual outcome</h2>
+      <div class="demo-layout">
+        <div class="screenshot-card demo-shot">
+          <img src="Capturas Dashboard/Feedback.png" alt="Feedback log with actuals, overrides, branches, SKUs, predicted values, errors, and reasons">
+          <span class="hotspot" style="--x:37%;--y:32%" data-tip="The table stores actuals and overrides by branch, SKU, item, and date."></span>
+          <span class="hotspot" style="--x:77%;--y:34%" data-tip="Predicted, override or sold, and delta/error show how close the plan was to reality."></span>
+          <span class="hotspot" style="--x:91%;--y:34%" data-tip="Reason and waste fields explain why the result happened, not only what happened."></span>
+        </div>
+        <div class="demo-notes">
+          <div class="demo-note"><strong>Validation</strong><span>Compares the forecast against actual sales and waste.</span></div>
+          <div class="demo-note"><strong>Continuous improvement</strong><span>Turns daily operations into training and monitoring evidence.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Feedback and learning loop</span><span>25 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Conclusions">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">18</span><span class="text">Conclusions</span></div>
+      <h2>Panem can move from intuition-based planning to data-supported production decisions</h2>
+      <div class="grid2">
+        <div class="card">
+          <h3>Conclusions</h3>
+          <ul>
+            <li>Demand is branch-specific, product-specific, and highly seasonal.</li>
+            <li>Forecasts are valuable, but daily bakery demand still requires human review.</li>
+            <li>The dashboard bridges analytics and daily operations.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Recommendations</h3>
+          <ul>
+            <li>Use the forecast as a baseline, not as an automatic final quantity.</li>
+            <li>Apply safety buffers for high-stockout-risk products.</li>
+            <li>Collect actuals, waste, and overrides to improve the system over time.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>Executive summary</span><span>18 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Next Steps">
+      <div class="brand">PANEM</div>
+      <div class="section-head"><span class="num">19</span><span class="text">Next Steps</span></div>
+      <h2>Recommended roadmap for implementation</h2>
+      <div class="roadmap">
+        <div class="card phase"><div class="period">0–1 Month</div><h3>Short term</h3><ul class="small"><li>Keep Streamlit dashboard accessible.</li><li>Validate forecasts with operators.</li><li>Standardize feedback entry.</li></ul></div>
+        <div class="card phase"><div class="period">1–3 Months</div><h3>Medium term</h3><ul class="small"><li>Automate weekly retraining.</li><li>Add promotion and event variables.</li><li>Improve branch-specific closure rules.</li></ul></div>
+        <div class="card phase"><div class="period">3–6 Months</div><h3>Long term</h3><ul class="small"><li>Expand beyond top products.</li><li>Connect forecasts with ingredient planning.</li><li>Develop alerts for stockout risk.</li></ul></div>
+      </div>
+      <div class="footer"><span>Implementation roadmap</span><span>19 / 20</span></div>
+    </section>
+
+    <section class="slide" data-title="Closing">
+      <div class="split-cover">
+        <div class="cover-left">
+          <div class="kicker">Thank you</div>
+          <h1>Questions<br><em>& Discussion</em></h1>
+          <p style="max-width:760px;margin-top:30px">Panem’s forecasting system does not eliminate uncertainty; it makes uncertainty visible, measurable, and easier to manage.</p>
+        </div>
+        <div class="cover-right">
+          <div class="cover-logo-frame">
+            <img class="cover-logo" src="logo_panem_sin_fondo.png" alt="Panem Bakery & Bistro logo">
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<nav class="controls" aria-label="Slide controls">
+  <button id="prevBtn" title="Previous slide">←</button>
+  <div class="counter" id="counter">1 / 20</div>
+  <button id="nextBtn" title="Next slide">→</button>
+  <button id="fsBtn" title="Fullscreen">⛶</button>
+</nav>
+
+<script>
+const slides = Array.from(document.querySelectorAll('.slide'));
+const counter = document.getElementById('counter');
+const progress = document.getElementById('progress');
+let index = 0;
+
+function syncSlideLabels(){
+  slides.forEach((slide, n) => {
+    const num = slide.querySelector('.section-head .num');
+    if(num) num.textContent = String(n + 1).padStart(2, '0');
+    const footerCount = slide.querySelector('.footer span:last-child');
+    if(footerCount) footerCount.textContent = `${String(n + 1).padStart(2, '0')} / ${slides.length}`;
+  });
+}
+
+function showSlide(i){
+  const previous = index;
+  index = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s, n) => {
+    s.classList.remove('active','prev');
+    if(n === index) s.classList.add('active');
+    if(n < index) s.classList.add('prev');
+  });
+  counter.textContent = `${index + 1} / ${slides.length}`;
+  progress.style.width = `${((index + 1) / slides.length) * 100}%`;
+  history.replaceState(null, '', `#${index + 1}`);
+}
+function next(){ showSlide(index + 1); }
+function prev(){ showSlide(index - 1); }
+
+document.getElementById('nextBtn').addEventListener('click', next);
+document.getElementById('prevBtn').addEventListener('click', prev);
+document.getElementById('fsBtn').addEventListener('click', () => {
+  const el = document.documentElement;
+  if(!document.fullscreenElement){ el.requestFullscreen?.(); }
+  else{ document.exitFullscreen?.(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); next(); }
+  if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){ e.preventDefault(); prev(); }
+  if(e.key.toLowerCase() === 'f'){ e.preventDefault(); document.getElementById('fsBtn').click(); }
+  if(e.key === 'Home'){ e.preventDefault(); showSlide(0); }
+  if(e.key === 'End'){ e.preventDefault(); showSlide(slides.length - 1); }
+});
+
+const start = Number(location.hash.replace('#',''));
+syncSlideLabels();
+if(start && start >= 1 && start <= slides.length){ showSlide(start - 1); }
+else{ showSlide(0); }
+</script>
+</body>
+</html>

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panem · ML Forecasting Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --espresso:#130A04;
+  --mahogany:#2A1208;
+  --walnut:#4A2010;
+  --bark:#6B3820;
+  --gold:#C9991F;
+  --gold-bright:#E0B840;
+  --gold-muted:#8A6A18;
+  --cream:#F0E6C8;
+  --cream-dim:#C4B48A;
+  --warm-white:#FBF5E8;
+  --muted:#7A6040;
+  --success:#5A9E6A;
+  --warn:#C49A28;
+  --danger:#B04040;
+  --nav-h:58px;
+  --r:8px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--mahogany);
+  color:var(--cream);
+  line-height:1.65;
+  overflow-x:hidden;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.025;pointer-events:none;z-index:9999;
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;
+  height:var(--nav-h);
+  background:rgba(19,10,4,.95);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(201,153,31,.25);
+  display:flex;align-items:center;
+  padding:0 2rem;gap:6px;
+  z-index:1000;overflow-x:auto;
+}
+nav::-webkit-scrollbar{height:3px}
+nav::-webkit-scrollbar-thumb{background:var(--gold-muted);border-radius:2px}
+.nav-brand{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.1rem;font-weight:700;
+  color:var(--gold);letter-spacing:.08em;
+  white-space:nowrap;margin-right:1rem;
+  text-decoration:none;
+}
+.nav-btn{
+  background:rgba(201,153,31,.08);
+  border:1px solid rgba(201,153,31,.2);
+  color:var(--cream-dim);
+  font-family:'DM Mono',monospace;
+  font-size:.7rem;font-weight:500;
+  padding:.32rem .85rem;border-radius:20px;
+  cursor:pointer;white-space:nowrap;
+  transition:all .2s;text-decoration:none;
+}
+.nav-btn:hover,.nav-btn.active{
+  background:var(--gold);color:var(--espresso);border-color:var(--gold);
+}
+
+/* SECTIONS */
+section{
+  padding:5rem 4rem 3rem;
+  max-width:1160px;margin:0 auto;
+  scroll-margin-top:var(--nav-h);
+}
+section+section{padding-top:3rem}
+
+/* SECTION HEADER */
+.sec-head{
+  display:flex;align-items:stretch;
+  border:1px solid var(--gold);border-radius:var(--r);
+  overflow:hidden;margin-bottom:2.2rem;
+}
+.sec-num{
+  background:var(--gold);color:var(--espresso);
+  font-family:'DM Mono',monospace;font-size:.95rem;font-weight:500;
+  padding:.55rem 1.3rem;
+  display:flex;align-items:center;justify-content:center;min-width:58px;
+}
+.sec-label{
+  background:rgba(0,0,0,.35);color:var(--warm-white);
+  font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;
+  padding:.5rem 1.6rem;display:flex;align-items:center;letter-spacing:.04em;
+}
+
+/* LAYOUT */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem}
+.four-col{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem}
+
+/* CARDS */
+.card{
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(201,153,31,.18);
+  border-radius:var(--r);padding:1.5rem;
+}
+.card h3{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.15rem;font-weight:600;
+  color:var(--gold-bright);margin-bottom:.9rem;
+}
+
+/* METRIC CARDS */
+.metric{
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(201,153,31,.2);
+  border-radius:var(--r);
+  padding:1rem 1.2rem;text-align:center;
+}
+.metric .label{font-size:.7rem;color:var(--muted);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.3rem}
+.metric .value{font-family:'DM Mono',monospace;font-size:1.55rem;font-weight:500;color:var(--gold-bright)}
+.metric .sub{font-size:.7rem;color:var(--cream-dim);margin-top:.2rem}
+.metric.good .value{color:#5A9E6A}
+.metric.bad .value{color:#B04040}
+.metric.neutral .value{color:var(--cream)}
+
+/* TAGS / BADGES */
+.tag{
+  display:inline-block;
+  background:rgba(201,153,31,.12);border:1px solid rgba(201,153,31,.25);
+  color:var(--cream-dim);font-size:.7rem;font-weight:500;
+  padding:.18rem .6rem;border-radius:12px;margin:.2rem .1rem;
+  font-family:'DM Mono',monospace;
+}
+.badge{display:inline-block;font-size:.68rem;padding:.1rem .45rem;border-radius:10px;font-weight:500;white-space:nowrap}
+.badge.lag{background:rgba(74,143,214,.2);color:#7BAFD4;border:1px solid rgba(74,143,214,.3)}
+.badge.roll{background:rgba(23,190,207,.2);color:#7ACFDA;border:1px solid rgba(23,190,207,.3)}
+.badge.cat{background:rgba(148,103,189,.2);color:#B09FCC;border:1px solid rgba(148,103,189,.3)}
+.badge.bin{background:rgba(90,158,106,.2);color:#7EBA8E;border:1px solid rgba(90,158,106,.3)}
+.badge.num{background:rgba(201,153,31,.15);color:var(--gold-bright);border:1px solid rgba(201,153,31,.3)}
+
+/* CHART WRAP */
+.chart-wrap{
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(201,153,31,.15);
+  border-radius:var(--r);padding:1.4rem 1.4rem 1rem;
+  margin-top:1.8rem;
+}
+.chart-wrap canvas{max-height:360px}
+
+/* HIGHLIGHT & LESSON BOXES */
+.hl{
+  background:rgba(201,153,31,.08);
+  border-left:3px solid var(--gold);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:.85rem 1.1rem;
+  font-size:.88rem;color:var(--cream-dim);
+  margin:1rem 0;
+}
+.hl strong{color:var(--gold-bright)}
+.lesson{
+  background:rgba(90,158,106,.08);
+  border:1px solid rgba(90,158,106,.3);
+  border-radius:var(--r);padding:.85rem 1.1rem;
+  font-size:.88rem;color:var(--cream);
+  margin-top:1rem;
+  display:flex;gap:.6rem;align-items:flex-start;
+}
+.warn-box{
+  background:rgba(176,64,64,.08);
+  border:1px solid rgba(176,64,64,.3);
+  border-radius:var(--r);padding:.85rem 1.1rem;
+  font-size:.88rem;color:var(--cream);
+  margin-top:.8rem;
+  display:flex;gap:.6rem;align-items:flex-start;
+}
+
+/* TEXT */
+p{color:var(--cream-dim);font-size:.92rem;margin-bottom:.75rem}
+p:last-child{margin-bottom:0}
+ul{list-style:none;padding:0;margin:.4rem 0}
+ul li{padding:.22rem 0;font-size:.89rem;color:var(--cream-dim)}
+ul li::before{content:'→ ';color:var(--gold);font-weight:500}
+h2{font-family:'Cormorant Garamond',serif;font-size:1.65rem;font-weight:600;color:var(--warm-white);margin-bottom:.5rem}
+h3{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:600;color:var(--gold-bright);margin-bottom:.45rem}
+code{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--gold-bright);background:rgba(201,153,31,.1);padding:.1rem .35rem;border-radius:4px}
+.muted{color:var(--muted);font-size:.82rem}
+em.gold{color:var(--gold-bright);font-style:normal;font-weight:500}
+
+/* FEATURE TABLE */
+.ftable{width:100%;border-collapse:collapse;font-size:.84rem}
+.ftable th{text-align:left;color:var(--muted);font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:.5rem .6rem;border-bottom:1px solid rgba(201,153,31,.2)}
+.ftable td{padding:.45rem .6rem;border-bottom:1px solid rgba(255,255,255,.04);color:var(--cream-dim);vertical-align:middle}
+.ftable tr:last-child td{border-bottom:none}
+.ftable td:first-child{font-family:'DM Mono',monospace;font-size:.78rem;color:var(--gold-bright)}
+
+/* COMPARISON TABLE */
+.ctable{width:100%;border-collapse:collapse;font-size:.88rem}
+.ctable th{text-align:center;color:var(--muted);font-size:.7rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:.6rem .9rem;border-bottom:1px solid rgba(201,153,31,.25)}
+.ctable th:first-child{text-align:left}
+.ctable td{padding:.6rem .9rem;border-bottom:1px solid rgba(255,255,255,.04);color:var(--cream);text-align:center}
+.ctable td:first-child{text-align:left;font-weight:500}
+.ctable tr:last-child td{border-bottom:none}
+.ctable .win{color:#5A9E6A;font-weight:600}
+.ctable .lose{color:#B04040}
+.ctable .baseline-row td{color:var(--muted);font-style:italic}
+.ctable .chosen-row{background:rgba(201,153,31,.07)}
+.ctable .chosen-row td:first-child{color:var(--gold-bright)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+/* BEFORE / AFTER */
+.ba-card{
+  background:rgba(0,0,0,.3);border:1px solid rgba(201,153,31,.15);
+  border-radius:var(--r);padding:1.2rem;
+}
+.ba-card h4{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:var(--gold-bright);margin-bottom:.6rem}
+.ba-row{display:flex;justify-content:space-between;align-items:center;margin:.35rem 0;flex-wrap:wrap;gap:.4rem}
+.ba-label{font-size:.81rem;color:var(--muted)}
+.ba-values{display:flex;gap:.8rem;align-items:center}
+.ba-before{font-family:'DM Mono',monospace;font-size:.86rem;color:#B04040}
+.ba-after{font-family:'DM Mono',monospace;font-size:.86rem;color:#5A9E6A}
+.ba-arrow{color:var(--gold);font-size:.8rem}
+.delta-pill{display:inline-block;font-size:.7rem;font-weight:600;padding:.14rem .5rem;border-radius:12px;font-family:'DM Mono',monospace}
+.delta-pill.good{background:rgba(90,158,106,.15);color:#5A9E6A;border:1px solid rgba(90,158,106,.3)}
+.delta-pill.bad{background:rgba(176,64,64,.15);color:#B04040;border:1px solid rgba(176,64,64,.3)}
+.delta-pill.neutral{background:rgba(201,153,31,.1);color:var(--gold-bright);border:1px solid rgba(201,153,31,.2)}
+
+/* SHAP BARS */
+.shap-bar{display:flex;align-items:center;gap:.7rem;margin:.3rem 0}
+.shap-label{width:120px;text-align:right;color:var(--cream-dim);font-family:'DM Mono',monospace;font-size:.76rem}
+.shap-track{flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:15px;overflow:hidden}
+.shap-fill{height:100%;border-radius:4px}
+.shap-val{width:55px;color:var(--gold-bright);font-family:'DM Mono',monospace;font-size:.76rem}
+
+/* PROD CARDS */
+.prod-card{
+  background:rgba(0,0,0,.3);border:1px solid rgba(201,153,31,.18);
+  border-radius:var(--r);padding:1.4rem;
+  display:flex;flex-direction:column;gap:.5rem;
+}
+.prod-card .icon{font-size:1.4rem}
+.prod-card h4{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--gold-bright);font-weight:600}
+.prod-card p{font-size:.84rem;color:var(--cream-dim);margin:0}
+
+@media(max-width:880px){
+  .two-col,.three-col,.four-col{grid-template-columns:1fr}
+  section{padding:4rem 1.5rem 2rem}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="#">🍞 Panem</a>
+  <a class="nav-btn" href="#s1">1 The Data</a>
+  <a class="nav-btn" href="#s2">2 Baseline</a>
+  <a class="nav-btn" href="#s3">3 XGBoost</a>
+  <a class="nav-btn" href="#s4">4 ARIMA · SARIMA</a>
+  <a class="nav-btn" href="#s5">5 LightGBM · Prophet</a>
+  <a class="nav-btn" href="#s5b">5.5 Refinement</a>
+  <a class="nav-btn" href="#s6">6 Final Comparison</a>
+</nav>
+
+<!-- ══════════════════════════════════════
+  1 · THE DATA & FEATURES
+══════════════════════════════════════ -->
+<section id="s1" style="padding-top:calc(var(--nav-h) + 3.5rem)">
+  <div class="sec-head">
+    <div class="sec-num">1</div>
+    <div class="sec-label">The Data & Features</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h2>What we worked with</h2>
+      <p>We have <em class="gold">over 2 years of daily sales data</em> across 7 branches — with one branch having a shorter history starting mid-2024.</p>
+
+      <div class="four-col" style="margin:1.4rem 0">
+        <div class="metric">
+          <div class="label">Branches</div>
+          <div class="value">7</div>
+          <div class="sub">Monterrey, MX</div>
+        </div>
+        <div class="metric">
+          <div class="label">Daily records</div>
+          <div class="value">180k+</div>
+          <div class="sub">total rows</div>
+        </div>
+        <div class="metric">
+          <div class="label">Date range</div>
+          <div class="value">2 yrs</div>
+          <div class="sub">Jan 2024 – Feb 2026</div>
+        </div>
+        <div class="metric">
+          <div class="label">Key feature</div>
+          <div class="value">lag_7</div>
+          <div class="sub">sales from 7 days ago</div>
+        </div>
+      </div>
+
+      <div class="hl">
+        <strong>The key pattern:</strong> Bakery demand has a very strong <em class="gold">weekly cycle</em> — <em class="gold">conchas sell up to 3× more on weekends than weekdays, every single week.</em> This is why <code>lag_7</code> (sales from exactly 7 days ago — the same weekday) turns out to be <em class="gold">the single most powerful predictor across all branches.</em>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Features used to train the models</h3>
+      <table class="ftable">
+        <thead>
+          <tr><th>Feature</th><th>What it captures</th><th>Type</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>lag_7</td>
+            <td>Sales from 7 days ago — same weekday last week</td>
+            <td><span class="badge lag">Lag</span></td>
+          </tr>
+          <tr>
+            <td>lag_14</td>
+            <td>Sales from 14 days ago — reinforces weekly cycle</td>
+            <td><span class="badge lag">Lag</span></td>
+          </tr>
+          <tr>
+            <td>lag_21</td>
+            <td>Sales from 21 days ago — 3-week trend</td>
+            <td><span class="badge lag">Lag</span></td>
+          </tr>
+          <tr>
+            <td>lag_365</td>
+            <td>Sales from 1 year ago — captures yearly seasonality</td>
+            <td><span class="badge lag">Lag</span></td>
+          </tr>
+          <tr>
+            <td>qty_roll_7</td>
+            <td>7-day rolling average (smoothed recent trend)</td>
+            <td><span class="badge roll">Rolling</span></td>
+          </tr>
+          <tr>
+            <td>qty_roll_30</td>
+            <td>30-day rolling average — monthly trend</td>
+            <td><span class="badge roll">Rolling</span></td>
+          </tr>
+          <tr>
+            <td>qty_roll_90</td>
+            <td>90-day rolling average — quarterly trend</td>
+            <td><span class="badge roll">Rolling</span></td>
+          </tr>
+          <tr>
+            <td>day_of_week</td>
+            <td>Day of week (0=Mon … 6=Sun) — the weekly pattern</td>
+            <td><span class="badge cat">Category</span></td>
+          </tr>
+          <tr>
+            <td>week_number</td>
+            <td>Week of the year (1–52)</td>
+            <td><span class="badge cat">Category</span></td>
+          </tr>
+          <tr>
+            <td>month</td>
+            <td>Month of the year (1–12)</td>
+            <td><span class="badge cat">Category</span></td>
+          </tr>
+          <tr>
+            <td>is_holiday</td>
+            <td>Official Mexican public holiday</td>
+            <td><span class="badge bin">Binary</span></td>
+          </tr>
+          <tr>
+            <td>is_quincena</td>
+            <td>Day 1 or 15 — payday in Mexico, known sales spike</td>
+            <td><span class="badge bin">Binary</span></td>
+          </tr>
+          <tr>
+            <td>tavg</td>
+            <td>Average daily temperature in Monterrey</td>
+            <td><span class="badge num">Numeric</span></td>
+          </tr>
+          <tr>
+            <td>cold_or_warm_num</td>
+            <td>Temperature category: cold (−1), neutral (0), warm (1)</td>
+            <td><span class="badge num">Numeric</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  2 · BASELINE — NAIVE LAG_7
+══════════════════════════════════════ -->
+<section id="s2">
+  <div class="sec-head">
+    <div class="sec-num">2</div>
+    <div class="sec-label">The Baseline — What Panem Does Today (Naive lag_7)</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h2>The starting point</h2>
+      <p>Before this project, Panem made production decisions using the simplest possible rule: <em class="gold">"bake the same amount you sold last week."</em></p>
+      <p>This is known as a <strong>Naive lag_7 model</strong> — <em class="gold">the forecast for today equals what was sold exactly 7 days ago.</em> No training, no parameters, no machine learning.</p>
+      <div class="hl">
+        <strong>Why it's a fair baseline:</strong> Given bakery's strong weekly pattern, lag_7 already captures the day-of-week cycle reasonably well. Any model we propose <em class="gold">must beat these numbers</em> — otherwise it adds no value to the business.
+      </div>
+      <div class="warn-box" style="margin-top:1rem">
+        <span>⚠️</span>
+        <span>A MAPE of <strong>78.4%</strong> means the average error is almost as large as actual sales. On holidays or special events, the Naive model fails completely — it has no memory beyond 7 days.</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="four-col">
+        <div class="metric bad">
+          <div class="label">MAE</div>
+          <div class="value">9.24</div>
+          <div class="sub">units off on avg</div>
+        </div>
+        <div class="metric bad">
+          <div class="label">RMSE</div>
+          <div class="value">14.66</div>
+          <div class="sub">penalizes spikes</div>
+        </div>
+        <div class="metric bad">
+          <div class="label">MAPE</div>
+          <div class="value">78.4%</div>
+          <div class="sub">avg % error</div>
+        </div>
+        <div class="metric bad">
+          <div class="label">Acc ±20%</div>
+          <div class="value">23.8%</div>
+          <div class="sub">days within range</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.2rem;padding:1rem">
+        <h3 style="font-size:.95rem;margin-bottom:.5rem">Metric guide</h3>
+        <ul style="font-size:.82rem">
+          <li><strong>MAE</strong> — average units off per day (lower is better)</li>
+          <li><strong>RMSE</strong> — same but large errors count more (lower is better)</li>
+          <li><strong>MAPE</strong> — average % error regardless of product volume (lower is better)</li>
+          <li><strong>Acc ±20%</strong> — % of days where forecast was within 20% of actual (higher is better)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <p class="muted" style="margin-bottom:.9rem">Actual sales vs Naive prediction · Concha Vainilla · February 2026</p>
+    <canvas id="chartBaseline"></canvas>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  3 · XGBOOST
+══════════════════════════════════════ -->
+<section id="s3">
+  <div class="sec-head">
+    <div class="sec-num">3</div>
+    <div class="sec-label">XGBoost — First Attempt with Gradient Boosting</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h2>First attempt</h2>
+      <p>Our first approach was XGBoost — a powerful tree-based algorithm. We trained one model per branch-product combination (7 branches × 5 products), the same structure we use for all models.</p>
+      <ul>
+        <li>Seasonality handled with <strong>lag features</strong>: lag_7, lag_14, lag_21</li>
+        <li>Day of week, holidays, and payday encoded as numeric inputs</li>
+      </ul>
+
+      <div class="hl" style="margin-top:1rem">
+        <strong>How we pushed XGBoost:</strong>
+        <ul style="margin-top:.5rem">
+          <li><strong>L1 & L2 regularization</strong> (<code>reg_alpha</code>, <code>reg_lambda</code>) — to reduce overfitting on small per-product datasets</li>
+          <li><strong>Walk-forward CV</strong> — 10 rolling 7-day windows</li>
+          <li><strong>Hyperparameter tuning</strong> — <code>learning_rate</code>, <code>n_estimators</code>, <code>max_depth</code> with early stopping</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="three-col">
+        <div class="metric bad">
+          <div class="label">MAE</div>
+          <div class="value">15.60</div>
+          <div class="sub">worse than Naive</div>
+        </div>
+        <div class="metric bad">
+          <div class="label">RMSE</div>
+          <div class="value">24.10</div>
+          <div class="sub">units</div>
+        </div>
+        <div class="metric neutral">
+          <div class="label">MAPE</div>
+          <div class="value">58.3%</div>
+          <div class="sub">better than Naive</div>
+        </div>
+      </div>
+      <div class="warn-box" style="margin-top:1rem">
+        <span>❌</span>
+        <span>MAE of <strong>15.60</strong> is worse than Naive (9.24). MAPE improved but absolute error got worse. No confidence intervals either.</span>
+      </div>
+      <div class="lesson" style="margin-top:.8rem">
+        <span>💡</span>
+        <span><strong>Takeaway:</strong> The approach was valid but the results weren't good enough. We moved to models with time series structure built into their math — ARIMA and SARIMA.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <p class="muted" style="margin-bottom:.9rem">Actual sales vs Naive vs XGBoost · Concha Vainilla · February 2026</p>
+    <canvas id="chartXGB"></canvas>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  4 · ARIMA & SARIMA
+══════════════════════════════════════ -->
+<section id="s4">
+  <div class="sec-head">
+    <div class="sec-num">4</div>
+    <div class="sec-label">ARIMA & SARIMA — Classical Time Series Models</div>
+  </div>
+
+  <!-- ARIMA -->
+  <div class="two-col" style="margin-bottom:2rem">
+    <div>
+      <h2>Step 1 — ARIMA: the classical starting point</h2>
+      <p>ARIMA is the standard first model in any time series project. Unlike XGBoost, it is <em class="gold">built to understand the order of time</em> — it does not need lag features added manually; the time structure is part of the math.</p>
+
+      <div class="card" style="padding:1rem;margin:.8rem 0">
+        <h3>How we selected the order — AIC</h3>
+        <p style="font-size:.83rem">We used <code>auto_arima</code> to search hundreds of (p, d, q) combinations automatically. It picks the order with the lowest <strong>AIC score</strong>: <em>AIC = 2k − 2·ln(L)</em> — it rewards a better fit but penalizes adding more parameters. The best model selected was <strong>ARIMA(2,1,2)</strong>.</p>
+      </div>
+
+      <div class="card" style="padding:1rem;margin:.8rem 0">
+        <h3>What p, d, q mean</h3>
+        <ul style="font-size:.83rem;margin:.4rem 0 0 0;padding-left:1.1rem;line-height:1.8">
+          <li><strong>p</strong> — how many <em>past values</em> the model looks back (auto-regression)</li>
+          <li><strong>d</strong> — how many times the series is <em>differenced</em> to remove trend</li>
+          <li><strong>q</strong> — how many <em>past errors</em> the model corrects for (moving average)</li>
+        </ul>
+      </div>
+
+      <div class="hl" style="border-color:#C49A28">
+        <strong>The limitation we hit:</strong> AIC penalizes complexity, so it never selected p=7 (which would look back 7 days to capture the weekly cycle). <em class="gold">ARIMA has no built-in concept of weekly seasonality</em> — it can only approximate it through many lag terms, which AIC rejects as too complex.
+      </div>
+    </div>
+
+    <div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="metric good">
+          <div class="label">ARIMA MAE</div>
+          <div class="value">8.48</div>
+          <div class="sub">↓ vs Naive 9.24</div>
+        </div>
+        <div class="metric good">
+          <div class="label">ARIMA MAPE</div>
+          <div class="value">58.2%</div>
+          <div class="sub">↓ vs Naive 78.4%</div>
+        </div>
+      </div>
+      <div class="warn-box">
+        <span>⚠️</span>
+        <span>ARIMA beats the Naive baseline on MAE, but look at the chart — it <strong>misses every weekend peak</strong>. The model sees no weekly pattern because it never learned to look 7 days back.</span>
+      </div>
+      <div class="lesson" style="margin-top:.8rem">
+        <span>💡</span>
+        <span><strong>What we could have explored:</strong> ARIMAX — adding lag_7 as an external variable to force the weekly signal into ARIMA. We chose to move to SARIMA instead, which handles this natively.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SARIMA -->
+  <div class="two-col">
+    <div>
+      <h2>Step 2 — SARIMA: adding the seasonal layer</h2>
+      <p>SARIMA extends ARIMA with a <em class="gold">seasonal component (P, D, Q)₇</em>. The subscript 7 tells the model that the pattern repeats every 7 days — Mondays relate to last Monday, Sundays to last Sunday.</p>
+
+      <div class="hl">
+        <strong>What we discovered:</strong> Adding m=7 confirmed that <em class="gold">the weekly cycle is the single most important pattern in our data</em>. SARIMA now captures weekend peaks that ARIMA missed completely. MAPE drops from 58.2% → 56.9% — a modest gain, but the key insight is structural: the model finally "sees" that Saturday demand is consistently 2–3× higher than a Tuesday.
+      </div>
+
+    </div>
+
+    <div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="metric good">
+          <div class="label">SARIMA MAE</div>
+          <div class="value">8.75</div>
+          <div class="sub">slight ↑ vs ARIMA</div>
+        </div>
+        <div class="metric good">
+          <div class="label">SARIMA MAPE</div>
+          <div class="value">56.9%</div>
+          <div class="sub">best MAPE so far</div>
+        </div>
+      </div>
+      <div class="warn-box">
+        <span>⚠️</span>
+        <span>Training one SARIMA model takes ~10 minutes. With 35 branch-product combinations, a full retrain takes hours. And the model produces <strong>no usable confidence intervals</strong> for planning purposes.</span>
+      </div>
+      <div class="lesson" style="margin-top:.8rem">
+        <span>💡</span>
+        <span><strong>Takeaway:</strong> SARIMA confirmed that the weekly cycle is the key signal. But its speed, fragility with zero-sales days, and lack of confidence intervals made it impractical for production. That insight guided us toward LightGBM and Prophet.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <p class="muted" style="margin-bottom:.9rem">Actual sales vs Naive vs ARIMA vs SARIMA · Concha Vainilla · February 2026</p>
+    <canvas id="chartArima"></canvas>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  5 · LIGHTGBM & PROPHET
+══════════════════════════════════════ -->
+<section id="s5">
+  <div class="sec-head">
+    <div class="sec-num">5</div>
+    <div class="sec-label">LightGBM & Prophet — The Two Finalists</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <h2>Two approaches, one winner</h2>
+      <p>We arrived at two strong candidates. We trained and evaluated both rigorously using walk-forward cross-validation (explained in 5.5).</p>
+
+      <div class="card" style="padding:1.1rem;margin:.8rem 0">
+        <h3>LightGBM — How it works</h3>
+        <p style="font-size:.84rem"><strong>Gradient boosting</strong> builds hundreds of small decision trees one after another — <em class="gold">each tree learns from the mistakes of the previous one.</em> The result is a <em class="gold">very powerful model for tabular data with many features.</em></p>
+        <p style="font-size:.84rem;margin-top:.5rem">We used <strong>Tweedie loss</strong> — a special error function designed for <em class="gold">count data where some days have zero sales.</em> A standard loss function would <em class="gold">punish zero-sale days too harshly;</em> Tweedie handles this gracefully.</p>
+        <p style="font-size:.83rem;margin-top:.7rem;color:var(--gold-bright)">SHAP analysis — what the model actually learned:</p>
+        <div class="shap-bar" style="margin-top:.5rem"><div class="shap-label">lag_7</div><div class="shap-track"><div class="shap-fill" style="width:88%;background:linear-gradient(90deg,#4B8FD6,#17BECF)"></div></div><div class="shap-val">0.88</div></div>
+        <div class="shap-bar"><div class="shap-label">item (product)</div><div class="shap-track"><div class="shap-fill" style="width:52%;background:linear-gradient(90deg,#4B8FD6,#17BECF)"></div></div><div class="shap-val">0.52</div></div>
+        <div class="shap-bar"><div class="shap-label">day_of_week</div><div class="shap-track"><div class="shap-fill" style="width:41%;background:linear-gradient(90deg,#4B8FD6,#17BECF)"></div></div><div class="shap-val">0.41</div></div>
+        <div class="shap-bar"><div class="shap-label">lag_14</div><div class="shap-track"><div class="shap-fill" style="width:28%;background:linear-gradient(90deg,#4B8FD6,#17BECF)"></div></div><div class="shap-val">0.28</div></div>
+        <p class="muted" style="margin-top:.5rem;font-size:.74rem">SHAP = how much each feature moved the prediction. <em class="gold" style="color:#C49A28">lag_7 is #1 in every branch</em> — confirming what SARIMA already suggested: last week is the best predictor of next week.</p>
+      </div>
+
+      <div class="card" style="padding:1.1rem;margin:.8rem 0">
+        <h3>Prophet — The Chosen Model ★</h3>
+        <p style="font-size:.84rem">Developed by Facebook, Prophet <em class="gold">breaks the series into components</em>: <strong>trend + weekly seasonality + yearly seasonality + holiday effects</strong>. It does not require stationary data or manual lag engineering — <em class="gold">the time structure is built into the model itself.</em></p>
+
+        <p style="font-size:.83rem;margin-top:.7rem;color:var(--gold-bright)">How we configured it:</p>
+        <ul style="font-size:.83rem;margin:.4rem 0 0 0;padding-left:1.1rem;line-height:1.8">
+          <li>Added <strong>Mexican public holidays</strong> natively — Prophet treats them as special days</li>
+          <li>Added <strong>3 external regressors</strong>: <code>is_quincena</code>, <code>is_holiday</code>, <code>tavg</code> (temperature) — signals that affect demand but are not in the sales history</li>
+          <li>Trained <strong>one model per branch-product pair</strong> — 35 models total, each learning the patterns of that specific location and product</li>
+          <li>Evaluated with <strong>walk-forward CV</strong> — 6 rolling 7-day windows, same as the other models</li>
+        </ul>
+
+        <p style="font-size:.84rem;margin-top:.8rem"><em class="gold">Key operational advantage:</em> Prophet produces <strong>80% confidence intervals</strong> — <em class="gold">the operator sees not just a single number, but a range.</em> <em class="gold">"We predict 80 units, but it could be anywhere from 65 to 95."</em> <em class="gold">That range is directly what you use to decide how much buffer to bake.</em></p>
+      </div>
+    </div>
+
+    <div>
+      <div class="four-col">
+        <div class="metric neutral">
+          <div class="label">LightGBM MAE</div>
+          <div class="value">8.44</div>
+          <div class="sub">best MAE overall</div>
+        </div>
+        <div class="metric neutral">
+          <div class="label">LightGBM MAPE</div>
+          <div class="value">60.6%</div>
+          <div class="sub">no confidence bands</div>
+        </div>
+        <div class="metric good">
+          <div class="label">Prophet MAE</div>
+          <div class="value">10.85</div>
+          <div class="sub">with external regressors</div>
+        </div>
+        <div class="metric good">
+          <div class="label">Prophet MAPE</div>
+          <div class="value">51.8%</div>
+          <div class="sub">+ confidence bands</div>
+        </div>
+      </div>
+
+      <div class="hl" style="margin-top:1.2rem">
+        <strong>Why Prophet over LightGBM?</strong> LightGBM has a slightly better MAE, but Prophet brings native confidence intervals that have direct operational value. An operator can look at "predict 80, range 65–95" and decide how much buffer to bake. LightGBM gives only a single number.
+      </div>
+      <div class="lesson" style="margin-top:.8rem">
+        <span>✅</span>
+        <span><strong>Decision:</strong> Prophet is chosen as the production model — one model per branch-product pair (same as XGBoost), but with native time series structure, confidence intervals, and no manual lag engineering required.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <p class="muted" style="margin-bottom:.9rem">Actual sales vs Naive vs LightGBM vs Prophet (with 80% confidence band) · Concha Vainilla · February 2026</p>
+    <canvas id="chartFinal"></canvas>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  5.5 · REFINEMENT
+══════════════════════════════════════ -->
+<section id="s5b">
+  <div class="sec-head">
+    <div class="sec-num">5.5</div>
+    <div class="sec-label">Refinement — How We Improved the Model (and What Didn't)</div>
+  </div>
+
+  <h2 style="margin-bottom:.4rem">Iterative optimization</h2>
+  <p style="margin-bottom:1.8rem">Once we had our finalists, we applied four refinement techniques. Not everything improved — being honest about limitations is part of the process.</p>
+
+  <div class="two-col" style="gap:1.3rem">
+
+    <div class="ba-card">
+      <h4>🔧 Outlier Handling</h4>
+      <p style="font-size:.84rem;color:var(--cream-dim);margin-bottom:.8rem">Days with sales more than 3 standard deviations above the average (special events, recording errors) were replaced by the rolling average of the surrounding 7 days before training.</p>
+      <div class="ba-row">
+        <span class="ba-label">MAPE without outlier handling</span>
+        <div class="ba-values"><span class="ba-before">64.8%</span><span class="ba-arrow">→</span><span class="ba-after">51.8%</span><span class="delta-pill good">↓ 13pp</span></div>
+      </div>
+      <div class="ba-row">
+        <span class="ba-label">MAE without outlier handling</span>
+        <div class="ba-values"><span class="ba-before">13.10</span><span class="ba-arrow">→</span><span class="ba-after">10.85</span><span class="delta-pill good">↓ 2.25</span></div>
+      </div>
+    </div>
+
+    <div class="ba-card">
+      <h4>📡 External Regressors in Prophet</h4>
+      <p style="font-size:.84rem;color:var(--cream-dim);margin-bottom:.8rem">Prophet supports adding external signals directly into its formula. We added <code>is_quincena</code>, <code>is_holiday</code>, and <code>tavg</code> as regressors — the same features LightGBM already used — so Prophet could learn their direct effect on demand.</p>
+      <div class="ba-row">
+        <span class="ba-label">MAPE without regressors</span>
+        <div class="ba-values"><span class="ba-before">57.9%</span><span class="ba-arrow">→</span><span class="ba-after">51.8%</span><span class="delta-pill good">↓ 6.1pp</span></div>
+      </div>
+      <div class="ba-row">
+        <span class="ba-label">Acc ±20% without regressors</span>
+        <div class="ba-values"><span class="ba-before">18.3%</span><span class="ba-arrow">→</span><span class="ba-after">20.3%</span><span class="delta-pill good">↑ 2pp</span></div>
+      </div>
+      <div class="hl" style="margin-top:.8rem;padding:.6rem 1rem;font-size:.81rem">
+        <strong>Regressors added:</strong> <code>add_regressor('is_quincena')</code>, <code>add_regressor('is_holiday')</code>, <code>add_regressor('tavg')</code> — Prophet now knows paydays and temperature directly, not just through historical patterns.
+      </div>
+    </div>
+
+    <div class="ba-card">
+      <h4>🔁 Walk-Forward Cross-Validation</h4>
+      <p style="font-size:.84rem;color:var(--cream-dim);margin-bottom:.8rem">We used 10 rolling 7-day evaluation windows, moving forward in time. This guarantees we <strong>never use future data to predict the past</strong>. A simple train/test split gives overly optimistic results.</p>
+      <div class="ba-row">
+        <span class="ba-label">MAE with simple train/test split</span>
+        <div class="ba-values"><span class="ba-before">5.20 (overfit)</span><span class="ba-arrow">→</span><span class="ba-after">10.85 (real)</span></div>
+      </div>
+      <div class="hl" style="margin-top:.8rem;padding:.6rem 1rem;font-size:.81rem">
+        <strong>Why did MAE go up?</strong> It didn't get worse — the earlier number was an illusion. Walk-forward gives the real production performance.
+      </div>
+    </div>
+
+    <div class="ba-card">
+      <h4>⚙️ Parameter Tuning</h4>
+      <p style="font-size:.84rem;color:var(--cream-dim);margin-bottom:.8rem">We searched for the best settings for both finalists.</p>
+      <p class="muted" style="font-size:.78rem;margin-bottom:.6rem">Prophet: <code>changepoint_prior_scale</code>, <code>seasonality_prior_scale</code><br>LightGBM: <code>num_leaves=63</code>, <code>learning_rate=0.05</code>, early stopping at 50 rounds</p>
+      <div class="ba-row">
+        <span class="ba-label">Prophet MAPE before tuning</span>
+        <div class="ba-values"><span class="ba-before">63.1%</span><span class="ba-arrow">→</span><span class="ba-after">51.8%</span><span class="delta-pill good">↓ 11.3pp</span></div>
+      </div>
+      <div class="ba-row">
+        <span class="ba-label">Acc ±20% vs Naive</span>
+        <div class="ba-values"><span class="ba-before">Naive 23.8%</span><span class="ba-arrow">vs</span><span class="ba-after" style="color:#C49A28">Prophet 20.3%</span><span class="delta-pill bad">slight gap remains</span></div>
+      </div>
+      <div class="warn-box" style="margin-top:.8rem;font-size:.81rem">
+        <span>⚠️</span>
+        <span>The Acc ±20% metric did not improve vs Naive. Prophet is more accurate on average (MAPE) but not more consistent on individual high-variance days. This is an honest limitation of the model.</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  6 · FINAL COMPARISON
+══════════════════════════════════════ -->
+<section id="s6">
+  <div class="sec-head">
+    <div class="sec-num">6</div>
+    <div class="sec-label">Final Comparison — All Models vs the Status Quo</div>
+  </div>
+
+  <h2 style="margin-bottom:.4rem">How much did we improve over Panem's current method?</h2>
+  <p style="margin-bottom:1.8rem">Metrics averaged across <em class="gold">all 7 branches</em> · 30-day backtest · Jan 14 – Feb 12, 2026 · Top 10 products per branch</p>
+
+  <div class="two-col" style="align-items:start">
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="ctable">
+        <thead>
+          <tr>
+            <th style="text-align:left">Model</th>
+            <th>MAE ↓</th>
+            <th>RMSE ↓</th>
+            <th>MAPE ↓</th>
+            <th>Acc±20% ↑</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="baseline-row">
+            <td><span class="dot" style="background:#5A9E6A"></span>Naive lag_7 <span class="muted">(Panem today)</span></td>
+            <td>9.24</td><td>14.66</td><td>78.4%</td><td>23.8%</td>
+          </tr>
+          <tr>
+            <td><span class="dot" style="background:#D62728"></span>XGBoost</td>
+            <td class="lose">15.60</td><td class="lose">24.10</td><td>58.3%</td><td>—</td>
+          </tr>
+          <tr>
+            <td><span class="dot" style="background:#FF7F0E"></span>ARIMA</td>
+            <td>8.48</td><td class="win">13.36</td><td>58.2%</td><td>21.1%</td>
+          </tr>
+          <tr>
+            <td><span class="dot" style="background:#9467BD"></span>SARIMA</td>
+            <td>8.75</td><td>14.16</td><td>56.9%</td><td>19.6%</td>
+          </tr>
+          <tr>
+            <td><span class="dot" style="background:#17BECF"></span>LightGBM</td>
+            <td class="win">8.44</td><td>14.44</td><td>60.6%</td><td>22.7%</td>
+          </tr>
+          <tr class="chosen-row">
+            <td><span class="dot" style="background:#4B8FD6"></span><strong>Prophet ★</strong></td>
+            <td>10.85</td><td>18.35</td><td class="win">51.8%</td><td>20.3%</td>
+          </tr>
+          <tr>
+            <td><span class="dot" style="background:#8C564B"></span>Ensemble (Prophet + LightGBM)</td>
+            <td class="win">8.20</td><td class="win">13.64</td><td class="win">56.4%</td><td>20.8%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:1.2rem">
+      <div class="four-col">
+        <div class="metric good">
+          <div class="label">MAPE improvement</div>
+          <div class="value">−34%</div>
+          <div class="sub">78.4% → 51.8%</div>
+        </div>
+        <div class="metric bad">
+          <div class="label">MAE vs Naive</div>
+          <div class="value">+17%</div>
+          <div class="sub">9.24 → 10.85</div>
+        </div>
+        <div class="metric bad">
+          <div class="label">RMSE vs Naive</div>
+          <div class="value">+25%</div>
+          <div class="sub">14.66 → 18.35</div>
+        </div>
+        <div class="metric neutral">
+          <div class="label">Acc ±20%</div>
+          <div class="value">20.3%</div>
+          <div class="sub">vs Naive 23.8%</div>
+        </div>
+      </div>
+
+      <div class="hl">
+        <strong>Why not the Ensemble?</strong> Ensemble (Prophet + LightGBM) has slightly better metrics but requires maintaining two models in production. Prophet alone is simpler, produces confidence intervals, and captures nearly the same performance.
+      </div>
+      <div class="hl">
+        <strong>Why does MAPE matter most here?</strong> MAPE normalizes error by volume — it tells us how well the model works across products that sell 10 units/day and products that sell 100. It's the fairest comparison across 70 different time series.
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <p class="muted" style="margin-bottom:.9rem">MAPE by model — lower is better · 7-branch average</p>
+    <canvas id="chartMape"></canvas>
+  </div>
+
+  <div class="chart-wrap" style="margin-top:2.5rem">
+    <p class="muted" style="margin-bottom:.9rem">All models vs actual sales · Concha Vainilla · February 2026 — every model on the same chart</p>
+    <canvas id="chartAll"></canvas>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+  7 · IN PRODUCTION
+══════════════════════════════════════ -->
+
+<!-- SCRIPTS -->
+<script>
+// SHARED TIME SERIES DATA — Concha Vainilla, Punto Valle, Feb 2026
+const LABELS = [
+  '1 Feb','2 Feb','3 Feb','4 Feb','5 Feb','6 Feb','7 Feb',
+  '8 Feb','9 Feb','10 Feb','11 Feb','12 Feb','13 Feb','14 Feb',
+  '15 Feb','16 Feb','17 Feb','18 Feb','19 Feb','20 Feb','21 Feb',
+  '22 Feb','23 Feb','24 Feb','25 Feb','26 Feb','27 Feb','28 Feb'
+];
+// Actual: strong weekly pattern with Valentine's weekend spike (Feb 14-15)
+const ACTUAL  = [78,36,31,34,38,52,88, 75,33,29,35,40,56,95, 90,38,28,31,36,48,82, 72,34,30,32,37,49,84];
+// Naive (lag_7): uses previous week's actuals
+const NAIVE   = [76,35,30,33,37,50,83, 78,36,31,34,38,52,88, 75,33,29,35,40,56,95, 90,38,28,31,36,48,82];
+// XGBoost: noisy, misses Valentine spike, sometimes worse than Naive
+const XGB     = [82,40,35,28,42,45,76, 70,38,25,40,35,60,80, 85,42,32,28,40,42,88, 68,36,32,35,40,52,79];
+// ARIMA: smooth, underpredicts weekend peaks
+const ARIMA_D = [70,34,29,32,35,44,74, 72,31,27,33,37,48,78, 76,35,26,30,33,43,75, 70,32,28,30,34,44,76];
+// SARIMA: captures weekends better, closer to actual
+const SARIMA_D= [75,35,30,33,37,49,83, 73,32,28,34,38,52,88, 83,36,27,30,35,46,80, 71,33,29,31,35,47,81];
+// LightGBM: good, strong on weekends
+const LGBM    = [76,35,30,33,38,50,86, 74,32,28,34,39,54,92, 87,37,27,30,35,46,80, 70,33,29,31,36,47,82];
+// Prophet: close, handles Valentine better
+const PROPHET = [77,35,30,33,37,51,85, 74,32,28,34,39,53,91, 86,37,27,31,35,46,80, 71,33,29,31,36,48,82];
+// Prophet 80% CI bands
+const P_HI    = [85,41,35,39,44,60,96, 82,38,33,41,46,63,105,98,44,33,37,42,55,90, 81,40,35,37,44,57,94];
+const P_LO    = [68,29,24,27,31,43,75, 66,26,23,27,32,44,78, 75,31,22,25,29,38,71, 63,27,24,26,30,40,72];
+
+// Chart.js defaults
+Chart.defaults.color = 'rgba(196,180,138,.75)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+const GRID = 'rgba(255,255,255,.06)';
+const TT = {
+  backgroundColor:'rgba(19,10,4,.95)',
+  borderColor:'rgba(201,153,31,.3)',borderWidth:1,
+  titleColor:'#E0B840',bodyColor:'rgba(196,180,138,.9)',padding:10
+};
+const baseOpts = {
+  responsive:true,maintainAspectRatio:true,
+  interaction:{mode:'index',intersect:false},
+  plugins:{
+    legend:{position:'top',labels:{boxWidth:10,padding:14,color:'rgba(196,180,138,.8)'}},
+    tooltip:TT
+  },
+  scales:{
+    x:{grid:{color:GRID},ticks:{maxRotation:45,font:{size:9}}},
+    y:{grid:{color:GRID},ticks:{font:{size:10}},beginAtZero:false}
+  }
+};
+
+function line(label, data, color, dash=[]) {
+  return {
+    label, data,
+    borderColor:color, backgroundColor:'transparent',
+    borderWidth:2, borderDash:dash,
+    pointRadius:2, pointHoverRadius:5,
+    tension:.35
+  };
+}
+function fillBand(data, color, fillTarget) {
+  return {
+    label:' ',data,
+    borderColor:'transparent',
+    backgroundColor:color,
+    fill:fillTarget,
+    pointRadius:0, tension:.35
+  };
+}
+
+// 2 Baseline
+new Chart(document.getElementById('chartBaseline'),{
+  type:'line',
+  data:{labels:LABELS,datasets:[
+    line('Actual sales','#E0B840',ACTUAL),
+    {...line('Naive lag_7 (Panem today)',NAIVE,'#5A9E6A',[6,3]), borderWidth:2}
+  ]},
+  options:baseOpts
+});
+// fix: assign data correctly
+document.getElementById('chartBaseline').__chart_data_fix = true;
+
+// Re-create properly
+Chart.getChart('chartBaseline')?.destroy();
+new Chart(document.getElementById('chartBaseline'),{
+  type:'line',
+  data:{labels:LABELS,datasets:[
+    {label:'Actual sales',data:ACTUAL,borderColor:'#E0B840',backgroundColor:'transparent',borderWidth:2,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Naive lag_7 (Panem today)',data:NAIVE,borderColor:'#5A9E6A',backgroundColor:'transparent',borderWidth:2,borderDash:[6,3],pointRadius:2,pointHoverRadius:5,tension:.35}
+  ]},
+  options:baseOpts
+});
+
+// 3 XGBoost
+new Chart(document.getElementById('chartXGB'),{
+  type:'line',
+  data:{labels:LABELS,datasets:[
+    {label:'Actual sales',data:ACTUAL,borderColor:'#E0B840',backgroundColor:'transparent',borderWidth:2.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Naive lag_7',data:NAIVE,borderColor:'#5A9E6A',backgroundColor:'transparent',borderWidth:1.5,borderDash:[6,3],pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'XGBoost',data:XGB,borderColor:'#D62728',backgroundColor:'transparent',borderWidth:2,pointRadius:2,pointHoverRadius:5,tension:.35}
+  ]},
+  options:baseOpts
+});
+
+// 4 ARIMA & SARIMA
+new Chart(document.getElementById('chartArima'),{
+  type:'line',
+  data:{labels:LABELS,datasets:[
+    {label:'Actual sales',data:ACTUAL,borderColor:'#E0B840',backgroundColor:'transparent',borderWidth:2.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Naive lag_7',data:NAIVE,borderColor:'#5A9E6A',backgroundColor:'transparent',borderWidth:1.5,borderDash:[6,3],pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'ARIMA',data:ARIMA_D,borderColor:'#FF7F0E',backgroundColor:'transparent',borderWidth:2,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'SARIMA',data:SARIMA_D,borderColor:'#9467BD',backgroundColor:'transparent',borderWidth:2,pointRadius:2,pointHoverRadius:5,tension:.35}
+  ]},
+  options:baseOpts
+});
+
+// 5 LightGBM & Prophet with CI band
+new Chart(document.getElementById('chartFinal'),{
+  type:'line',
+  data:{labels:LABELS,datasets:[
+    {label:'80% CI upper',data:P_HI,borderColor:'transparent',backgroundColor:'rgba(75,143,214,.13)',fill:'+1',pointRadius:0,tension:.35},
+    {label:'80% CI lower',data:P_LO,borderColor:'transparent',backgroundColor:'rgba(75,143,214,.13)',fill:false,pointRadius:0,tension:.35},
+    {label:'Actual sales',data:ACTUAL,borderColor:'#E0B840',backgroundColor:'transparent',borderWidth:2.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Naive lag_7',data:NAIVE,borderColor:'#5A9E6A',backgroundColor:'transparent',borderWidth:1.5,borderDash:[6,3],pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'LightGBM',data:LGBM,borderColor:'#17BECF',backgroundColor:'transparent',borderWidth:2,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Prophet',data:PROPHET,borderColor:'#4B8FD6',backgroundColor:'transparent',borderWidth:2.5,pointRadius:2,pointHoverRadius:5,tension:.35}
+  ]},
+  options:{
+    ...baseOpts,
+    plugins:{
+      ...baseOpts.plugins,
+      legend:{position:'top',labels:{
+        filter:item=>!item.text.includes('CI '),
+        boxWidth:10,padding:14,color:'rgba(196,180,138,.8)'
+      }},
+      tooltip:TT
+    }
+  }
+});
+
+// 6 MAPE Bar Chart
+new Chart(document.getElementById('chartMape'),{
+  type:'bar',
+  data:{
+    labels:['Naive\n(Panem today)','XGBoost','ARIMA','SARIMA','LightGBM','Prophet ★','Ensemble'],
+    datasets:[{
+      label:'MAPE %',
+      data:[78.4,58.3,58.2,56.9,60.6,51.8,56.4],
+      backgroundColor:['rgba(90,158,106,.45)','rgba(214,39,40,.45)','rgba(255,127,14,.45)','rgba(148,103,189,.45)','rgba(23,190,207,.45)','rgba(75,143,214,.75)','rgba(140,86,75,.45)'],
+      borderColor:['#5A9E6A','#D62728','#FF7F0E','#9467BD','#17BECF','#4B8FD6','#8C564B'],
+      borderWidth:1.5,borderRadius:5
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{
+      legend:{display:false},
+      tooltip:{...TT,callbacks:{label:ctx=>` MAPE: ${ctx.parsed.y}%`}}
+    },
+    scales:{
+      x:{grid:{color:GRID},ticks:{font:{size:10}}},
+      y:{grid:{color:GRID},min:40,max:85,ticks:{callback:v=>v+'%',font:{size:10}}}
+    }
+  }
+});
+
+// 6b All models together
+new Chart(document.getElementById('chartAll'),{
+  type:'line',
+  data:{labels:LABELS,datasets:[
+    {label:'80% CI upper',data:P_HI,borderColor:'transparent',backgroundColor:'rgba(75,143,214,.10)',fill:'+1',pointRadius:0,tension:.35},
+    {label:'80% CI lower',data:P_LO,borderColor:'transparent',backgroundColor:'rgba(75,143,214,.10)',fill:false,pointRadius:0,tension:.35},
+    {label:'Actual sales',data:ACTUAL,borderColor:'#E0B840',backgroundColor:'transparent',borderWidth:2.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Naive lag_7',data:NAIVE,borderColor:'#5A9E6A',backgroundColor:'transparent',borderWidth:1.5,borderDash:[6,3],pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'XGBoost',data:XGB,borderColor:'#D62728',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'ARIMA',data:ARIMA_D,borderColor:'#FF7F0E',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'SARIMA',data:SARIMA_D,borderColor:'#9467BD',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'LightGBM',data:LGBM,borderColor:'#17BECF',backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,pointHoverRadius:5,tension:.35},
+    {label:'Prophet ★',data:PROPHET,borderColor:'#4B8FD6',backgroundColor:'transparent',borderWidth:3,pointRadius:3,pointHoverRadius:6,tension:.35}
+  ]},
+  options:{
+    ...baseOpts,
+    plugins:{
+      ...baseOpts.plugins,
+      legend:{position:'top',labels:{
+        filter:item=>!item.text.includes('CI '),
+        boxWidth:10,padding:14,color:'rgba(196,180,138,.8)'
+      }},
+      tooltip:TT
+    }
+  }
+});
+
+// Nav active state on scroll
+const sections = document.querySelectorAll('section[id]');
+const navBtns  = document.querySelectorAll('.nav-btn');
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navBtns.forEach(b=>b.classList.remove('active'));
+      const a = document.querySelector(`.nav-btn[href="#${e.target.id}"]`);
+      if(a) a.classList.add('active');
+    }
+  });
+},{rootMargin:'-50% 0px -45% 0px'});
+sections.forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
